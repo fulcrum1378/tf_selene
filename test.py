@@ -1,1 +1,1 @@
-import selene_sdk
+import selene_sdk as s
