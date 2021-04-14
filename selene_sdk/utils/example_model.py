@@ -1,16 +1,3 @@
-"""
-An example model that has double the number of convolutional layers
-that DeepSEA (Zhou & Troyanskaya, 2015) has. Otherwise, the architecture
-is identical to DeepSEA.
-
-We make no claims about the performance of this model. It is being stored
-in `utils` so it can be easily loaded in the Jupyter notebook tutorials
-for Selene, and may be removed in the future.
-
-When making a model architecture file of your own, please review this
-file in its entirety. In addition to the model class, Selene expects
-that `criterion` and `get_optimizer(lr)` are also specified in this file.
-"""
 import numpy as np
 import torch
 import torch.nn as nn
@@ -63,9 +50,6 @@ class DeeperDeepSEA(nn.Module):
             nn.Sigmoid())
 
     def forward(self, x):
-        """
-        Forward propagation of a batch.
-        """
         out = self.conv_net(x)
         reshape_out = out.view(out.size(0), 960 * self._n_channels)
         predict = self.classifier(reshape_out)

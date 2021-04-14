@@ -1,15 +1,8 @@
-"""
-This module specifies the MultiModelWrapper class, currently intended for
-use through Selene's API (as opposed to the CLI).
-
-Loads multiple models and concatenates their outputs.
-"""
 import torch
 import torch.nn as nn
 
 
 class MultiModelWrapper(nn.Module):
-
     def __init__(self, sub_models, concat_dim=1):
         super(MultiModelWrapper, self).__init__()
         self.sub_models = sub_models

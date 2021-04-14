@@ -55,9 +55,6 @@ class TrainModel(object):
                  metrics=dict(roc_auc=roc_auc_score,
                               average_precision=average_precision_score),
                  use_scheduler=True):
-        """
-        Constructs a new `TrainModel` object.
-        """
         self.model = model
         self.sampler = data_sampler
         self.criterion = loss_criterion
@@ -144,8 +141,7 @@ class TrainModel(object):
                     if isinstance(v, torch.Tensor):
                         state[k] = v.cuda()
 
-        logger.info(
-            ("Resuming from checkpoint: step {0}, min loss {1}").format(
+        logger.info("Resuming from checkpoint: step {0}, min loss {1}".format(
                 self._start_step, self._min_loss))
 
     def _init_train(self):
@@ -164,8 +160,7 @@ class TrainModel(object):
         self._train_loss = []
 
     def _init_validate(self):
-        self._min_loss = float(
-            "inf")  # TODO: Should this be set when it is used later? Would need to if we want to train model 2x in one run.
+        self._min_loss = float("inf")
         self._create_validation_set(n_samples=self._n_validation_samples)
         self._validation_metrics = PerformanceMetrics(
             self.sampler.get_feature_from_index,
@@ -186,16 +181,6 @@ class TrainModel(object):
             metrics=self._metrics)
 
     def _create_validation_set(self, n_samples=None):
-        """
-        Generates the set of validation examples.
-
-        Parameters
-        ----------
-        n_samples : int or None, optional
-            Default is `None`. The size of the validation set. If `None`,
-            will use all validation examples in the sampler.
-
-        """
         logger.info("Creating validation dataset.")
         t_i = time()
         self._validation_data, self._all_validation_targets = \
@@ -209,19 +194,10 @@ class TrainModel(object):
             len(self._validation_data)))
 
     def create_test_set(self):
-        """
-        Loads the set of test samples.
-        We do not create the test set in the `TrainModel` object until
-        this method is called, so that we avoid having to load it into
-        memory until the model has been trained and is ready to be
-        evaluated.
-
-        """
         logger.info("Creating test dataset.")
         t_i = time()
         self._test_data, self._all_test_targets = \
-            self.sampler.get_test_set(
-                self.batch_size, n_samples=self._n_test_samples)
+            self.sampler.get_test_set(self.batch_size, n_samples=self._n_test_samples)
         t_f = time()
         logger.info(("{0} s to load {1} test examples ({2} test batches) "
                      "to evaluate after all training steps.").format(
@@ -233,24 +209,13 @@ class TrainModel(object):
             data=self._all_test_targets)
 
     def _get_batch(self):
-        """
-        Fetches a mini-batch of examples
-
-        Returns
-        -------
-        tuple(numpy.ndarray, numpy.ndarray)
-            A tuple containing the examples and targets.
-
-        """
         t_i_sampling = time()
         batch_sequences, batch_targets = self.sampler.sample(
             batch_size=self.batch_size)
         t_f_sampling = time()
-        logger.debug(
-            ("[BATCH] Time to sample {0} examples: {1} s.").format(
-                self.batch_size,
-                t_f_sampling - t_i_sampling))
-        return (batch_sequences, batch_targets)
+        logger.debug("[BATCH] Time to sample {0} examples: {1} s.".format(
+            self.batch_size, t_f_sampling - t_i_sampling))
+        return batch_sequences, batch_targets
 
     def _checkpoint(self):
         checkpoint_dict = {
@@ -273,10 +238,6 @@ class TrainModel(object):
                 checkpoint_dict, False)
 
     def train_and_validate(self):
-        """
-        Trains the model and measures validation performance.
-
-        """
         for step in range(self._start_step, self.max_steps):
             self.step = step
             self.train()
@@ -289,15 +250,6 @@ class TrainModel(object):
         self.sampler.save_dataset_to_file("train", close_filehandle=True)
 
     def train(self):
-        """
-        Trains the model on a batch of data.
-
-        Returns
-        -------
-        float
-            The training loss.
-
-        """
         t_i = time()
         self.model.train()
         self.sampler.set_mode("train")
@@ -333,21 +285,6 @@ class TrainModel(object):
             self._train_loss = []
 
     def _evaluate_on_data(self, data_in_batches):
-        """
-        Makes predictions for some labeled input data.
-
-        Parameters
-        ----------
-        data_in_batches : list(tuple(numpy.ndarray, numpy.ndarray))
-            A list of tuples of the data, where the first element is
-            the example, and the second element is the label.
-
-        Returns
-        -------
-        tuple(float, list(numpy.ndarray))
-            Returns the average loss, and the list of all predictions.
-
-        """
         self.model.eval()
 
         batch_losses = []
@@ -376,17 +313,6 @@ class TrainModel(object):
         return np.average(batch_losses), all_predictions
 
     def validate(self):
-        """
-        Measures model validation performance.
-
-        Returns
-        -------
-        dict
-            A dictionary, where keys are the names of the loss metrics,
-            and the values are the average value for that metric over
-            the validation set.
-
-        """
         validation_loss, all_predictions = self._evaluate_on_data(
             self._validation_data)
         valid_scores = self._validation_metrics.update(
@@ -422,17 +348,6 @@ class TrainModel(object):
         logger.info("validation loss: {0}".format(validation_loss))
 
     def evaluate(self):
-        """
-        Measures the model test performance.
-
-        Returns
-        -------
-        dict
-            A dictionary, where keys are the names of the loss metrics,
-            and the values are the average value for that metric over
-            the test set.
-
-        """
         if self._test_data is None:
             self.create_test_set()
         average_loss, all_predictions = self._evaluate_on_data(
@@ -457,7 +372,7 @@ class TrainModel(object):
         self._test_metrics.visualize(
             all_predictions, self._all_test_targets, self.output_dir)
 
-        return (average_scores, feature_scores_dict)
+        return average_scores, feature_scores_dict
 
     def _save_checkpoint(self,
                          state,

@@ -1,6 +1,3 @@
-"""
-This module provides the NonStrandSpecific class.
-"""
 import torch
 from torch.nn.modules import Module
 
@@ -14,8 +11,8 @@ def _flip(x, dim):
     x = x.view(-1, *xsize[dim:])
     x = x.view(
         x.size(0), x.size(1), -1)[:, getattr(
-            torch.arange(x.size(1)-1, -1, -1),
-            ('cpu','cuda')[x.is_cuda])().long(), :]
+        torch.arange(x.size(1) - 1, -1, -1),
+        ('cpu', 'cuda')[x.is_cuda])().long(), :]
     return x.view(xsize)
 
 
@@ -46,4 +43,3 @@ class NonStrandSpecific(Module):
             return (output + output_from_rev) / 2
         else:
             return torch.max(output, output_from_rev)
-

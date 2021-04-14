@@ -1,11 +1,3 @@
-"""Classes and methods for loading configurations from YAML files.
-Taken (with minor changes) from `Pylearn2`_.
-
-
-.. _Pylearn2: \
-http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-"""
 import os
 import re
 import warnings
@@ -16,57 +8,17 @@ from collections import namedtuple
 SCIENTIFIC_NOTATION_REGEXP = r"^[\-\+]?(\d+\.?\d*|\d*\.?\d+)?[eE][\-\+]?\d+$"
 IS_INITIALIZED = False
 
-
 _BaseProxy = namedtuple("_BaseProxy", ["callable", "positionals", "keywords",
-                                     "yaml_src"])
+                                       "yaml_src"])
 
 
 class _Proxy(_BaseProxy):
-    """An intermediate representation between initial YAML parse and
-    object instantiation.
-
-    Parameters
-    ----------
-    callable : callable
-        The function/class to call to instantiate this node.
-    positionals : iterable
-        Placeholder for future support for positional
-        arguments (`*args`).
-    keywords : dict-like
-        A mapping from keywords to arguments (`**kwargs`), which may be
-        `_Proxy`s or `_Proxy`s nested inside `dict` or `list` instances.
-        Keys must be strings that are valid Python variable names.
-    yaml_src : str
-        The YAML source that created this node, if available.
-
-    Notes
-    -----
-    This is intended as a robust, forward-compatible intermediate
-    representation for either internal consumption or external
-    consumption by another tool e.g. hyperopt.
-    This particular class mainly exists to  override `_BaseProxy`'s
-    `__hash__` (to avoid hashing unhashable namedtuple elements).
-
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-
-    """
     __slots__ = []
 
     def __hash__(self):
-        """Return a hash based on the object ID (to avoid hashing
-         unhashable namedtuple elements).
-
-        """
         return hash(id(self))
 
     def bind(self, **kwargs):
-        """Sets the values for specified keys.
-
-        """
         for k in kwargs:
             if k not in self.keywords:
                 self.keywords[k] = kwargs[k]
@@ -76,59 +28,10 @@ class _Proxy(_BaseProxy):
 
 
 def _do_not_recurse(value):
-    """Function symbol used for wrapping an unpickled object
-    (which should not be recursively expanded).
-
-    This is recognized and respected by the instantiation parser.
-    Implementationally, no-op (returns the value passed in as an
-    argument).
-
-    Parameters
-    ----------
-    value : object
-        The value to be returned.
-
-    Returns
-    -------
-    value : object
-        The same object passed in as an argument.
-
-    Notes
-    -----
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-    """
     return value
 
 
 def _instantiate_proxy_tuple(proxy, bindings=None):
-    """ Helper function for `_instantiate` that handles objects of the
-     `_Proxy` class.
-
-    Parameters
-    ----------
-    proxy : _Proxy object
-        A `_Proxy` object that.
-    bindings : dict, optional
-        A dictionary mapping previously instantiated `_Proxy` objects
-        to their instantiated values.
-
-    Returns
-    -------
-    obj : object
-        The result object from recursively instantiating the object DAG.
-
-    Notes
-    -----
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-    """
     if proxy in bindings:
         return bindings[proxy]
     else:
@@ -151,35 +54,6 @@ def _instantiate_proxy_tuple(proxy, bindings=None):
 
 
 def _preprocess(string, environ=None):
-    """Preprocesses a string.
-
-    Preprocesses a string, by replacing `${VARNAME}` with
-    `os.environ['VARNAME']` and ~ with the path to the user's
-    home directory.
-
-    Parameters
-    ----------
-    string : str
-        String object to _preprocess
-    environ : dict, optional
-        If supplied, preferentially accept values from
-        this dictionary as well as `os.environ`. That is,
-        if a key appears in both, this dictionary takes
-        precedence.
-
-    Returns
-    -------
-    rval : str
-        The preprocessed string
-
-    Notes
-    -----
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-    """
     if environ is None:
         environ = {}
 
@@ -209,30 +83,6 @@ def _preprocess(string, environ=None):
 
 
 def instantiate(proxy, bindings=None):
-    """Instantiate a hierarchy of proxy objects.
-
-    Parameters
-    ----------
-    proxy : object
-        A `_Proxy` object or list/dict/literal. Strings are run through
-        `_preprocess`.
-    bindings : dict, optional
-        A dictionary mapping previously instantiated `_Proxy` objects
-        to their instantiated values.
-
-    Returns
-    -------
-    obj : object
-        The result object from recursively instantiating the object DAG.
-
-    Notes
-    -----
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-    """
     if bindings is None:
         bindings = {}
     if isinstance(proxy, _Proxy):
@@ -253,38 +103,6 @@ def instantiate(proxy, bindings=None):
 
 
 def load(stream, environ=None, instantiate=True, **kwargs):
-    """Loads a YAML configuration from a string or file-like object.
-
-    Parameters
-    ----------
-    stream : str or object
-        Either a string containing valid YAML or a file-like object
-        supporting the `.read()` interface.
-    environ : dict, optional
-        A dictionary used for ${FOO} substitutions in addition to
-        environment variables. If a key appears both in `os.environ`
-        and this dictionary, the value in this dictionary is used.
-    instantiate : bool, optional
-        If `False`, do not actually instantiate the objects but instead
-        produce a nested hierarchy of `_Proxy` objects.
-    **kwargs : dict
-        Other keyword arguments, all of which are passed to `yaml.load`.
-
-    Returns
-    -------
-    graph : dict or object
-        The dictionary or object (if the top-level element specified
-        a Python object to instantiate), or a nested hierarchy of
-        `_Proxy` objects.
-
-    Notes
-    -----
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-    """
     global IS_INITIALIZED
     if not IS_INITIALIZED:
         _initialize()
@@ -297,39 +115,6 @@ def load(stream, environ=None, instantiate=True, **kwargs):
 
 
 def load_path(path, environ=None, instantiate=False, **kwargs):
-    """Convenience function for loading a YAML configuration from a
-    file.
-
-    Parameters
-    ----------
-    path : str
-        The path to the file to load on disk.
-    environ : dict, optional
-        A dictionary used for ${FOO} substitutions in addition to
-        environment variables. If a key appears both in `os.environ`
-        and this dictionary, the value in this dictionary is used.
-    instantiate : bool, optional
-        If `False`, do not actually instantiate the objects but instead
-        produce a nested hierarchy of `_Proxy` objects.
-    **kwargs : dict
-        Other keyword arguments, all of which are passed to `yaml.load`.
-
-    Returns
-    -------
-    graph : dict or object
-        The dictionary or object (if the top-level element specified
-        a Python object to instantiate), or a nested hierarchy of
-        `_Proxy` objects.
-
-    Notes
-    -----
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-
-    """
     with open(path, 'r') as f:
         content = ''.join(f.readlines())
 
@@ -397,8 +182,8 @@ def _try_to_import(tag_suffix):
             msg = ("Could not evaluate {0}. "
                    "Did you mean {1}? "
                    "Original error was {2}".format(
-                       tag_suffix, candidates, str(e)
-                   ))
+                tag_suffix, candidates, str(e)
+            ))
 
         except Exception:
             warnings.warn("Attempt to decipher AttributeError failed")
@@ -410,14 +195,6 @@ def _try_to_import(tag_suffix):
 
 
 def _initialize():
-    """
-    Notes
-    -----
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-    """
     global IS_INITIALIZED
     yaml.add_multi_constructor(
         "!obj:", _multi_constructor_obj, Loader=yaml.SafeLoader)
@@ -430,20 +207,11 @@ def _initialize():
         "!float", _constructor_float, Loader=yaml.SafeLoader)
 
     pattern = re.compile(SCIENTIFIC_NOTATION_REGEXP)
-    yaml.add_implicit_resolver("!float",  pattern)
+    yaml.add_implicit_resolver("!float", pattern)
     IS_INITIALIZED = True
 
 
 def _multi_constructor_obj(loader, tag_suffix, node):
-    """
-    Notes
-    -----
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-    """
     yaml_src = yaml.serialize(node)
     _construct_mapping(node)
     mapping = loader.construct_mapping(node)
@@ -454,9 +222,7 @@ def _multi_constructor_obj(loader, tag_suffix, node):
     for key in mapping.keys():
         if not isinstance(key, six.string_types):
             raise TypeError(
-                "Received non string object ({0}) as key in mapping.".format(
-                    str(key)
-                ))
+                "Received non string object ({0}) as key in mapping.".format(str(key)))
     if '.' not in tag_suffix:
         # I'm not sure how this was ever working without eval().
         callable = eval(tag_suffix)
@@ -468,32 +234,12 @@ def _multi_constructor_obj(loader, tag_suffix, node):
 
 
 def _multi_constructor_import(loader, tag_suffix, node):
-    """Callback for "!import:" tag.
-
-    Notes
-    -----
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-    """
     if '.' not in tag_suffix:
         raise yaml.YAMLError("!import: tag suffix contains no'.'")
     return _try_to_import(tag_suffix)
 
 
 def _constructor_import(loader, node):
-    """Callback for "!import"
-
-    Notes
-    -----
-    Taken (with minor changes) from`Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-    """
     val = loader.construct_scalar(node)
     if '.' not in val:
         raise yaml.YAMLError("Import tag suffix contains no '.'")
@@ -501,33 +247,10 @@ def _constructor_import(loader, node):
 
 
 def _constructor_float(loader, node):
-    """Callback for "!float"
-
-    Notes
-    -----
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-    """
-    val = loader.construct_scalar(node)
-    return float(val)
+    return float(loader.construct_scalar(node))
 
 
 def _construct_mapping(node, deep=False):
-    """This is a modified version of
-    `yaml.BaseConstructor._construct_mapping` only
-    permitting unique keys.
-
-    Notes
-    -----
-    Taken (with minor changes) from `Pylearn2`_.
-
-    .. _Pylearn2: \
-    http://github.com/lisa-lab/pylearn2/blob/master/pylearn2/config/yaml_parse.py
-
-    """
     if not isinstance(node, yaml.nodes.MappingNode):
         const = yaml.constructor
         raise Exception(

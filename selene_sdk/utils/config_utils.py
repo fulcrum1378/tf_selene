@@ -1,8 +1,3 @@
-"""
-Utilities for loading configurations, instantiating Python objects, and
-running operations in _Selene_.
-
-"""
 import os
 import importlib
 import sys
@@ -16,9 +11,6 @@ from . import instantiate
 
 
 def class_instantiate(classobj):
-    """Not used currently, but might be useful later for recursive
-    class instantiation
-    """
     for attr, obj in classobj.__dict__.items():
         is_module = getattr(obj, '__module__', None)
         if is_module and "selene_sdk" in is_module and attr != "model":
@@ -27,19 +19,6 @@ def class_instantiate(classobj):
 
 
 def module_from_file(path):
-    """
-    Load a module created based on a Python file path.
-
-    Parameters
-    ----------
-    path : str
-        Path to the model architecture file.
-
-    Returns
-    -------
-    The loaded module
-
-    """
     parent_path, module_file = os.path.split(path)
     loader = importlib.machinery.SourceFileLoader(
         module_file[:-3], path)
@@ -49,22 +28,6 @@ def module_from_file(path):
 
 
 def module_from_dir(path):
-    """
-    This method expects that you pass in the path to a valid Python module,
-    where the `__init__.py` file already imports the model class,
-    `criterion`, and `get_optimizer` methods from the appropriate file
-    (e.g. `__init__.py` contains the line `from <model_class_file> import
-    <ModelClass>`).
-
-    Parameters
-    ----------
-    path : str
-        Path to the Python module containing the model class.
-
-    Returns
-    -------
-    The loaded module
-    """
     parent_path, module_dir = os.path.split(path)
     sys.path.insert(0, parent_path)
     return importlib.import_module(module_dir)
@@ -99,34 +62,6 @@ def initialize_model(model_configs, train=True, lr=None):
 
 
 def execute(operations, configs, output_dir):
-    """
-    Execute operations in _Selene_.
-
-    Parameters
-    ----------
-    operations : list(str)
-        The list of operations to carry out in _Selene_.
-    configs : dict or object
-        The loaded configurations from a YAML file.
-    output_dir : str or None
-        The path to the directory where all outputs will be saved.
-        If None, this means that an `output_dir` was not specified
-        in the top-level configuration keys. `output_dir` must be
-        specified in each class's individual configuration wherever
-        it is required.
-
-    Returns
-    -------
-    None
-        Executes the operations listed and outputs any files
-        to the dirs specified in each operation's configuration.
-
-    Raises
-    ------
-    ValueError
-        If an expected key in configuration is missing.
-
-    """
     model = None
     train_model = None
     for op in operations:
@@ -148,7 +83,6 @@ def execute(operations, configs, output_dir):
                 train_model_info.bind(output_dir=output_dir)
 
             train_model = instantiate(train_model_info)
-            # TODO: will find a better way to handle this in the future
             if "load_test_set" in configs and configs["load_test_set"] and \
                     "evaluate" in operations:
                 train_model.create_test_set()

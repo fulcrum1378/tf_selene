@@ -1,12 +1,5 @@
-"""
-This is the script used to create the BED files with gencode protein-coding
-genes. Posted here for reproducibility.
-
-TODO: add documentation, switch to docopt.
-"""
 import os
 import sys
-
 
 if __name__ == "__main__":
     filename = sys.argv[1]
