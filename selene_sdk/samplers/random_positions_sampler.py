@@ -1,9 +1,3 @@
-"""
-This module provides the RandomPositionsSampler class.
-
-TODO: Currently, only works with sequences from `selene_sdk.sequences.Genome`.
-We would like to generalize this to `selene_sdk.sequences.Sequence` if possible.
-"""
 from collections import namedtuple
 import logging
 import random
@@ -16,108 +10,10 @@ from ..utils import get_indices_and_probabilities
 
 logger = logging.getLogger(__name__)
 
-
-SampleIndices = namedtuple(
-    "SampleIndices", ["indices", "weights"])
-"""
-A tuple containing the indices for some samples, and a weight to
-allot to each index when randomly drawing from them.
-
-TODO: this is common to both the intervals sampler and the
-random positions sampler. Can we move this to utils or
-somewhere else?
-
-Parameters
-----------
-indices : list(int)
-    The numeric index of each sample.
-weights : list(float)
-    The amount of weight assigned to each sample.
-
-Attributes
-----------
-indices : list(int)
-    The numeric index of each sample.
-weights : list(float)
-    The amount of weight assigned to each sample.
-
-"""
+SampleIndices = namedtuple("SampleIndices", ["indices", "weights"])
 
 
 class RandomPositionsSampler(OnlineSampler):
-    """This sampler randomly selects a position in the genome and queries for
-    a sequence centered at that position for input to the model.
-
-    TODO: generalize to selene_sdk.sequences.Sequence?
-
-    Parameters
-    ----------
-    reference_sequence : selene_sdk.sequences.Genome
-        A reference sequence from which to create examples.
-    target_path : str
-        Path to tabix-indexed, compressed BED file (`*.bed.gz`) of genomic
-        coordinates mapped to the genomic features we want to predict.
-    features : list(str)
-        List of distinct features that we aim to predict.
-    seed : int, optional
-        Default is 436. Sets the random seed for sampling.
-    validation_holdout : list(str) or float, optional
-        Default is `['chr6', 'chr7']`. Holdout can be regional or
-        proportional. If regional, expects a list (e.g. `['chrX', 'chrY']`).
-        Regions must match those specified in the first column of the
-        tabix-indexed BED file. If proportional, specify a percentage
-        between (0.0, 1.0). Typically 0.10 or 0.20.
-    test_holdout : list(str) or float, optional
-        Default is `['chr8', 'chr9']`. See documentation for
-        `validation_holdout` for additional information.
-    sequence_length : int, optional
-        Default is 1000. Model is trained on sequences of `sequence_length`
-        where genomic features are annotated to the center regions of
-        these sequences.
-    center_bin_to_predict : int, optional
-        Default is 200. Query the tabix-indexed file for a region of
-        length `center_bin_to_predict`.
-    feature_thresholds : float [0.0, 1.0], optional
-        Default is 0.5. The `feature_threshold` to pass to the
-        `GenomicFeatures` object.
-    mode : {'train', 'validate', 'test'}
-        Default is `'train'`. The mode to run the sampler in.
-    save_datasets : list(str), optional
-        Default is `['test']`. The list of modes for which we should
-        save the sampled data to file.
-    output_dir : str or None, optional
-        Default is None. The path to the directory where we should
-        save sampled examples for a mode. If `save_datasets` is
-        a non-empty list, `output_dir` must be specified. If
-        the path in `output_dir` does not exist it will be created
-        automatically.
-
-    Attributes
-    ----------
-    reference_sequence : selene_sdk.sequences.Genome
-        The reference sequence that examples are created from.
-    target : selene_sdk.targets.Target
-        The `selene_sdk.targets.Target` object holding the features that we
-        would like to predict.
-    validation_holdout : list(str) or float
-        The samples to hold out for validating model performance. These
-        can be "regional" or "proportional". If regional, this is a list
-        of region names (e.g. `['chrX', 'chrY']`). These regions must
-        match those specified in the first column of the tabix-indexed
-        BED file. If proportional, this is the fraction of total samples
-        that will be held out.
-    test_holdout : list(str) or float
-        The samples to hold out for testing model performance. See the
-        documentation for `validation_holdout` for more details.
-    sequence_length : int
-        The length of the sequences to  train the model on.
-    modes : list(str)
-        The list of modes that the sampler can be run in.
-    mode : str
-        The current mode that the sampler is running in. Must be one of
-        the modes listed in `modes`.
-
-    """
     def __init__(self,
                  reference_sequence,
                  target_path,
@@ -163,14 +59,14 @@ class RandomPositionsSampler(OnlineSampler):
                 if self._holdout_type == "chromosome":
                     self._partition_genome_by_chromosome()
                 else:
-                     self._partition_genome_by_proportion()
+                    self._partition_genome_by_proportion()
 
                 for mode in self.modes:
                     self._update_randcache(mode=mode)
                 self._initialized = True
             return func(self, *args, **kwargs)
-        return dfunc
 
+        return dfunc
 
     def _partition_genome_by_proportion(self):
         for chrom, len_chrom in self.reference_sequence.get_chr_lens():
@@ -246,7 +142,7 @@ class RandomPositionsSampler(OnlineSampler):
         if window_end - window_start < self.sequence_length:
             print(bin_start, bin_end,
                   self._start_radius, self._end_radius,
-                  self._start_window_radius, self._end_window_radius,)
+                  self._start_window_radius, self._end_window_radius, )
             return None
         strand = self.STRAND_SIDES[random.randint(0, 1)]
         retrieved_seq = \
@@ -256,9 +152,9 @@ class RandomPositionsSampler(OnlineSampler):
         if retrieved_seq.shape[0] == 0:
             logger.info("Full sequence centered at {0} position {1} "
                         "could not be retrieved. Sampling again.".format(
-                            chrom, position))
+                chrom, position))
             return None
-        elif np.mean(retrieved_seq==0.25) > 0.30:
+        elif np.mean(retrieved_seq == 0.25) > 0.30:
             logger.info("Over 30% of the bases in the sequence centered "
                         "at {0} position {1} are ambiguous ('N'). "
                         "Sampling again.".format(chrom, position))
@@ -289,32 +185,6 @@ class RandomPositionsSampler(OnlineSampler):
 
     @init
     def sample(self, batch_size=1, mode=None):
-        """
-        Randomly draws a mini-batch of examples and their corresponding
-        labels.
-
-        Parameters
-        ----------
-        batch_size : int, optional
-            Default is 1. The number of examples to include in the
-            mini-batch.
-        mode : str, optional
-            Default is None. The operating mode that the object should run in.
-            If None, will use the current mode `self.mode`.
-
-        Returns
-        -------
-        sequences, targets : tuple(numpy.ndarray, numpy.ndarray)
-            A tuple containing the numeric representation of the
-            sequence examples and their corresponding labels. The
-            shape of `sequences` will be
-            :math:`B \\times L \\times N`, where :math:`B` is
-            `batch_size`, :math:`L` is the sequence length, and
-            :math:`N` is the size of the sequence type's alphabet.
-            The shape of `targets` will be :math:`B \\times F`,
-            where :math:`F` is the number of features.
-
-        """
         mode = mode if mode else self.mode
         sequences = np.zeros((batch_size, self.sequence_length, 4))
         targets = np.zeros((batch_size, self.n_features))
@@ -340,4 +210,4 @@ class RandomPositionsSampler(OnlineSampler):
             sequences[n_samples_drawn, :, :] = seq
             targets[n_samples_drawn, :] = seq_targets
             n_samples_drawn += 1
-        return (sequences, targets)
+        return sequences, targets
