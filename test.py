@@ -1,12 +1,20 @@
-# import selene_sdk as s
-
-# s.EvaluateModel().evaluate()
+import selene_sdk as s
 
 # import torch as ch
 # import tensorflow as tf
+
 # my_data = [[1., -1.], [1., -1.]]
 # print(ch.Tensor(my_data).shape)  # torch.Tensor
 # print(tf.constant(my_data).shape)  # tensorflow.python.framework.ops.EagerTensor
+
+# x = ch.Tensor([1.], requires_grad=True)
+# with ch.no_grad():
+# y = x * 2
+# print(y.requires_grad)
+
+# x = tf.Tensor([[1., -1.], [1., -1.]])
+# tf.stop_gradient(x)
+# print(x.get_shape())
 
 # torch.arange()
 # torch.autograd.Variable()

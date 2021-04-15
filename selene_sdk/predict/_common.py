@@ -1,9 +1,7 @@
 import math
 
 import numpy as np
-import torch
-from torch.autograd import Variable
-from torch.nn import Module
+from tensorflow import Module, Tensor, Variable
 
 # noinspection PyProtectedMember
 from ..utils import _is_lua_trained_model
@@ -26,17 +24,15 @@ def get_reverse_complement_encoding(allele_encoding, bases_arr, complementary_ba
 
 
 def predict(model: Module, batch_sequences, use_cuda: bool = False):
-    inputs = torch.Tensor(batch_sequences)
+    inputs = Tensor(batch_sequences)
     if use_cuda:
         inputs = inputs.cuda()
-    with torch.no_grad():
-        inputs = Variable(inputs)
-        if _is_lua_trained_model(model):
-            outputs = model.forward(
-                inputs.transpose(1, 2).contiguous().unsqueeze_(2))
-        else:
-            outputs = model.forward(inputs.transpose(1, 2))
-        return outputs.data.cpu().numpy()
+    inputs = Variable(inputs, trainable=False)
+    if _is_lua_trained_model(model):
+        outputs = model.forward(inputs.transpose(1, 2).contiguous().unsqueeze_(2))
+    else:
+        outputs = model.forward(inputs.transpose(1, 2))
+    return outputs.data.cpu().numpy()
 
 
 def _pad_sequence(sequence, to_length, unknown_base):

@@ -3,7 +3,7 @@ import logging
 import sys
 
 import numpy as np
-from torch.nn import Module
+from tensorflow import Module
 
 from .multi_model_wrapper import MultiModelWrapper
 
@@ -39,7 +39,7 @@ def get_indices_and_probabilities(interval_lengths, indices):
             interval_lengths, keep_indices)
 
 
-def load_model_from_state_dict(state_dict, model):
+def load_model_from_state_dict(state_dict, model: Module):
     if 'state_dict' in state_dict:
         state_dict = state_dict['state_dict']
 

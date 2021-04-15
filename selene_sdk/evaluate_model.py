@@ -4,9 +4,8 @@ from typing import Dict, List
 import warnings
 
 import numpy as np
-import torch
-from torch.nn import DataParallel, Module
-from torch.autograd import Variable
+from tensorflow import Module, Tensor, Variable
+from torch import load
 
 from .samplers import Sampler
 from .sequences import Genome
@@ -23,7 +22,7 @@ class EvaluateModel(object):
     def __init__(self,
                  model: Module,
                  criterion,  # extends torch.nn._Loss
-                 data_sampler: Sampler,
+                 data_sampler: Sampler,  # must be a subclass of Sampler NOT itself
                  features: List[str],
                  trained_model_path: str,
                  output_dir: str,
@@ -31,14 +30,13 @@ class EvaluateModel(object):
                  n_test_samples: int = None,
                  report_gt_feature_n_positives: int = 10,
                  use_cuda: bool = False,
-                 data_parallel: bool = False,
+                 # data_parallel: bool = False,
                  use_features_ord: List[str] = None):
         self.criterion = criterion
-        trained_model = torch.load(
+        trained_model = load(
             trained_model_path, map_location=lambda storage, location: storage)
         if "state_dict" in trained_model:
-            self.model = load_model_from_state_dict(
-                trained_model["state_dict"], model)
+            self.model = load_model_from_state_dict(trained_model["state_dict"], model)
         else:
             self.model = load_model_from_state_dict(trained_model, model)
         self.model.eval()
@@ -65,11 +63,6 @@ class EvaluateModel(object):
         initialize_logger(
             os.path.join(self.output_dir, "{0}.log".format(__name__)),
             verbosity=2)
-
-        self.data_parallel = data_parallel
-        if self.data_parallel:
-            self.model = DataParallel(model)
-            logger.debug("Wrapped model in DataParallel")
 
         self.use_cuda = use_cuda
         if self.use_cuda: self.model.cuda()
@@ -99,26 +92,26 @@ class EvaluateModel(object):
         batch_losses = []
         all_predictions = []
         for (inputs, targets) in self._test_data:
-            inputs = torch.Tensor(inputs)
-            targets = torch.Tensor(targets[:, self._use_ixs])
+            inputs = Tensor(inputs)
+            targets = Tensor(targets[:, self._use_ixs])
 
             if self.use_cuda:
                 inputs = inputs.cuda()
                 targets = targets.cuda()
-            with torch.no_grad():
-                inputs = Variable(inputs)
-                targets = Variable(targets)
 
-                if _is_lua_trained_model(self.model):
-                    predictions = self.model.forward(
-                        inputs.transpose(1, 2).contiguous().unsqueeze_(2))
-                else:
-                    predictions = self.model.forward(inputs.transpose(1, 2))
-                predictions = predictions[:, self._use_ixs]
-                loss = self.criterion(predictions, targets)
+            inputs = Variable(inputs, trainable=False)
+            targets = Variable(targets, trainable=False)
 
-                all_predictions.append(predictions.data.cpu().numpy())
-                batch_losses.append(loss.item())
+            if _is_lua_trained_model(self.model):
+                predictions = self.model.forward(
+                    inputs.transpose(1, 2).contiguous().unsqueeze_(2))
+            else:
+                predictions = self.model.forward(inputs.transpose(1, 2))
+            predictions = predictions[:, self._use_ixs]
+            loss = self.criterion(predictions, targets)
+
+            all_predictions.append(predictions.data.cpu().numpy())
+            batch_losses.append(loss.item())
         all_predictions = np.vstack(all_predictions)
 
         average_scores = self._metrics.update(all_predictions, self._all_test_targets)

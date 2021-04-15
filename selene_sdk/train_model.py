@@ -7,9 +7,8 @@ from time import time
 from typing import Dict, Tuple
 
 import numpy as np
-import torch
-from torch.nn import L1Loss, DataParallel, Module
-from torch.autograd import Variable
+from tensorflow import Module, Tensor, Variable
+from torch import load, save, set_num_threads
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
@@ -51,15 +50,14 @@ class TrainModel(object):
                  n_test_samples: int = None,
                  cpu_n_threads: int = 1,
                  use_cuda: bool = False,
-                 data_parallel: bool = False,
+                 # data_parallel: bool = False,
                  logging_verbosity: int = 2,
                  checkpoint_resume: str = None,
                  use_scheduler: bool = True):
         self.model = model
         self.sampler = data_sampler
         self.criterion = loss_criterion
-        self.optimizer = optimizer_class(
-            self.model.parameters(), **optimizer_kwargs)
+        self.optimizer = optimizer_class(self.model.parameters(), **optimizer_kwargs)
 
         self.batch_size = batch_size
         self.max_steps = max_steps
@@ -79,14 +77,9 @@ class TrainModel(object):
                                                           self.nth_step_report_stats,
                                                           self.max_steps))
 
-        torch.set_num_threads(cpu_n_threads)
+        set_num_threads(cpu_n_threads)
 
         self.use_cuda = use_cuda
-        self.data_parallel = data_parallel
-
-        if self.data_parallel:
-            self.model = DataParallel(model)
-            logger.debug("Wrapped model in DataParallel")
 
         if self.use_cuda:
             self.model.cuda()
@@ -117,7 +110,7 @@ class TrainModel(object):
             self._train_loss = self._min_loss = None
 
     def _load_checkpoint(self, checkpoint_resume: str) -> None:
-        checkpoint = torch.load(
+        checkpoint = load(
             checkpoint_resume,
             map_location=lambda storage, location: storage)
         if "state_dict" not in checkpoint:
@@ -127,8 +120,7 @@ class TrainModel(object):
                  "continued training of models that were not originally "
                  "trained using Selene.").format(checkpoint_resume))
 
-        self.model = load_model_from_state_dict(
-            checkpoint["state_dict"], self.model)
+        self.model = load_model_from_state_dict(checkpoint["state_dict"], self.model)
 
         self._start_step = checkpoint["step"]
         if self._start_step >= self.max_steps:
@@ -140,7 +132,7 @@ class TrainModel(object):
         if self.use_cuda:
             for state in self.optimizer.state.values():
                 for k, v in state.items():
-                    if isinstance(v, torch.Tensor):
+                    if isinstance(v, Tensor):
                         state[k] = v.cuda()
 
         logger.info("Resuming from checkpoint: step {0}, min loss {1}".format(
@@ -254,8 +246,8 @@ class TrainModel(object):
         self.sampler.set_mode("train")
 
         inputs, targets = self._get_batch()
-        inputs = torch.Tensor(inputs)
-        targets = torch.Tensor(targets)
+        inputs = Tensor(inputs)
+        targets = Tensor(targets)
 
         if self.use_cuda:
             inputs = inputs.cuda()
@@ -290,23 +282,22 @@ class TrainModel(object):
         all_predictions = []
 
         for (inputs, targets) in data_in_batches:
-            inputs = torch.Tensor(inputs)
-            targets = torch.Tensor(targets)
+            inputs = Tensor(inputs)
+            targets = Tensor(targets)
 
             if self.use_cuda:
                 inputs = inputs.cuda()
                 targets = targets.cuda()
 
-            with torch.no_grad():
-                inputs = Variable(inputs)
-                targets = Variable(targets)
+            inputs = Variable(inputs, trainable=False)
+            targets = Variable(targets, trainable=False)
 
-                predictions = self.model(inputs.transpose(1, 2))
-                loss = self.criterion(predictions, targets)
+            predictions = self.model(inputs.transpose(1, 2))
+            loss = self.criterion(predictions, targets)
 
-                all_predictions.append(predictions.data.cpu().numpy())
+            all_predictions.append(predictions.data.cpu().numpy())
 
-                batch_losses.append(loss.item())
+            batch_losses.append(loss.item())
         all_predictions = np.vstack(all_predictions)
         return np.average(batch_losses), all_predictions
 
@@ -362,7 +353,7 @@ class TrainModel(object):
     def _save_checkpoint(self, state, is_best, filename="checkpoint") -> None:
         logger.debug("[TRAIN] {0}: Saving model state to file.".format(state["step"]))
         cp_filepath = os.path.join(self.output_dir, filename)
-        torch.save(state, "{0}.pth.tar".format(cp_filepath))
+        save(state, "{0}.pth.tar".format(cp_filepath))
         if is_best:
             best_filepath = os.path.join(self.output_dir, "best_model")
             shutil.copyfile("{0}.pth.tar".format(cp_filepath),
