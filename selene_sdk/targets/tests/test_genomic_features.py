@@ -41,12 +41,8 @@ class TestGenomicFeatures(unittest.TestCase):
              ["chr3", "8620", "8680", "TBP"],       # len 60
              ["chr3", "8645", "8720", "TBP"]]       # len 75
 
-    def get_feature_rows(self, chrom, start, end):
-        """This function disregards (`start`, `end`) input
-        """
-        if chrom is None:
-            return None
-
+    def get_feature_rows(self, chrom):  # , start, end
+        if chrom is None: return None
         if chrom == "1":
             return self.rows_example1
         elif chrom == "2":

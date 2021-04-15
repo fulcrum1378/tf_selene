@@ -2,11 +2,12 @@ import math
 import os
 import warnings
 from time import time
+from typing import List
 
 import numpy as np
 import pyfaidx
 import torch
-import torch.nn as nn
+from torch.nn import DataParallel, Module
 
 from ._common import _pad_sequence
 from ._common import _truncate_sequence
@@ -26,24 +27,25 @@ from .predict_handlers import LogitScoreHandler
 from .predict_handlers import WritePredictionsHandler
 from .predict_handlers import WriteRefAltHandler
 from ..sequences import Genome
+# noinspection PyProtectedMember
 from ..utils import _is_lua_trained_model
 from ..utils import load_model_from_state_dict
 
-# TODO: MAKE THESE GENERIC:
 ISM_COLS = ["pos", "ref", "alt"]
 VARIANTEFFECT_COLS = ["chrom", "pos", "name", "ref", "alt", "strand", "ref_match", "contains_unk"]
 
+
 class AnalyzeSequences(object):
     def __init__(self,
-                 model,
-                 trained_model_path,
-                 sequence_length,
-                 features,
-                 batch_size=64,
-                 use_cuda=False,
-                 data_parallel=False,
+                 model: Module,
+                 trained_model_path,  # str or List[str]
+                 sequence_length: int,
+                 features: List[str],
+                 batch_size: int = 64,
+                 use_cuda: bool = False,
+                 data_parallel: bool = False,
                  reference_sequence=Genome,
-                 write_mem_limit=1500):
+                 write_mem_limit: int = 1500):
         self.model = model
 
         if isinstance(trained_model_path, str):
@@ -72,11 +74,10 @@ class AnalyzeSequences(object):
 
         self.data_parallel = data_parallel
         if self.data_parallel:
-            self.model = nn.DataParallel(model)
+            self.model = DataParallel(model)
 
         self.use_cuda = use_cuda
-        if self.use_cuda:
-            self.model.cuda()
+        if self.use_cuda: self.model.cuda()
 
         self.sequence_length = sequence_length
 
@@ -104,45 +105,7 @@ class AnalyzeSequences(object):
                               colnames_for_ids,
                               output_size=None,
                               mode="ism"):
-        """
-        Initialize the handlers to which Selene reports model predictions
-
-        Parameters
-        ----------
-        save_data : list(str)
-            A list of the data files to output. Must input 1 or more of the
-            following options: ["abs_diffs", "diffs", "logits", "predictions"].
-        output_path_prefix : str
-            Path to which the reporters will output data files. Selene will
-            add a prefix to the resulting filename, where the prefix is based
-            on the name of the user-specified input file. This allows a user
-            to distinguish between output files from different inputs when
-            a user specifies the same output directory for multiple inputs.
-        output_format : {'tsv', 'hdf5'}
-            The desired output format. Currently Selene supports TSV and HDF5
-            formats.
-        colnames_for_ids : list(str)
-            Specify the names of columns that will be used to identify the
-            sequence for which Selene has made predictions (e.g. (chrom,
-            pos, id, ref, alt) will be the column names for variant effect
-            prediction outputs).
-        output_size : int, optional
-            The total number of rows in the output. Must be specified when
-            the output_format is hdf5.
-        mode : {'prediction', 'ism', 'varianteffect'}
-            If saving model predictions, the handler Selene chooses for the
-            task is dependent on the mode. For example, the reporter for
-            variant effect prediction writes paired ref and alt predictions
-            to different files.
-
-        Returns
-        -------
-        list(selene_sdk.predict.predict_handlers.PredictionsHandler)
-            List of reporters to update as Selene receives model predictions.
-
-        """
-        save_data = set(save_data) & set(
-            ["diffs", "abs_diffs", "logits", "predictions"])
+        save_data = set(save_data) & set(["diffs", "abs_diffs", "logits", "predictions"])
         save_data = sorted(list(save_data))
         if len(save_data) == 0:
             raise ValueError("'save_data' parameter must be a list that "
@@ -226,59 +189,10 @@ class AnalyzeSequences(object):
         return sequences, labels
 
     def get_predictions_for_bed_file(self,
-                                     input_path,
-                                     output_dir,
-                                     output_format="tsv",
-                                     strand_index=None):
-        """
-        Get model predictions for sequences specified as genome coordinates
-        in a BED file. Coordinates do not need to be the same length as the
-        model expected sequence input--predictions will be centered at the
-        midpoint of the specified start and end coordinates.
-
-        Parameters
-        ----------
-        input_path : str
-            Input path to the BED file.
-        output_dir : str
-            Output directory to write the model predictions.
-        output_format : {'tsv', 'hdf5'}, optional
-            Default is 'tsv'. Choose whether to save TSV or HDF5 output files.
-            TSV is easier to access (i.e. open with text editor/Excel) and
-            quickly peruse, whereas HDF5 files must be accessed through
-            specific packages/viewers that support this format (e.g. h5py
-            Python package). Choose
-
-                * 'tsv' if your list of sequences is relatively small
-                  (:math:`10^4` or less in order of magnitude) and/or your
-                  model has a small number of features (<1000).
-                * 'hdf5' for anything larger and/or if you would like to
-                  access the predictions/scores as a matrix that you can
-                  easily filter, apply computations, or use in a subsequent
-                  classifier/model. In this case, you may access the matrix
-                  using `mat["data"]` after opening the HDF5 file using
-                  `mat = h5py.File("<output.h5>", 'r')`. The matrix columns
-                  are the features and will match the same ordering as your
-                  features .txt file (same as the order your model outputs
-                  its predictions) and the matrix rows are the sequences.
-                  Note that the row labels (FASTA description/IDs) will be
-                  output as a separate .txt file (should match the ordering
-                  of the sequences in the input FASTA).
-
-        strand_index : int or None, optional
-            Default is None. If the trained model makes strand-specific
-            predictions, your input file may include a column with strand
-            information (strand must be one of {'+', '-', '.'}). Specify
-            the index (0-based) to use it. Otherwise, by default '+' is used.
-
-
-        Returns
-        -------
-        None
-            Writes the output to file(s) in `output_dir`. Filename will
-            match that specified in the filepath.
-
-        """
+                                     input_path: str,
+                                     output_dir: str,
+                                     output_format: str = "tsv",
+                                     strand_index: int = None) -> None:
         _, filename = os.path.split(input_path)
         output_prefix = '.'.join(filename.split('.')[:-1])
 
@@ -299,7 +213,7 @@ class AnalyzeSequences(object):
         batch_ids = []
         for i, (label, coords) in enumerate(zip(labels, seq_coords)):
             encoding, contains_unk = self.reference_sequence.get_encoding_from_coords_check_unk(
-                    *coords, pad=True)
+                *coords, pad=True)
             if sequences is None:
                 sequences = np.zeros((self.batch_size, *encoding.shape))
             if i and i % self.batch_size == 0:
@@ -308,7 +222,7 @@ class AnalyzeSequences(object):
                 sequences = np.zeros((self.batch_size, *encoding.shape))
                 batch_ids = []
             sequences[i % self.batch_size, :, :] = encoding
-            batch_ids.append(label+(contains_unk,))
+            batch_ids.append(label + (contains_unk,))
             if contains_unk:
                 warnings.warn(("For region {0}, "
                                "reference sequence contains unknown "
@@ -321,49 +235,10 @@ class AnalyzeSequences(object):
         reporter.handle_batch_predictions(preds, batch_ids)
         reporter.write_to_file()
 
-
     def get_predictions_for_fasta_file(self,
-                                       input_path,
-                                       output_dir,
-                                       output_format="tsv"):
-        """
-        Get model predictions for sequences in a FASTA file.
-
-        Parameters
-        ----------
-        input_path : str
-            Input path to the FASTA file.
-        output_dir : str
-            Output directory to write the model predictions.
-        output_format : {'tsv', 'hdf5'}, optional
-            Default is 'tsv'. Choose whether to save TSV or HDF5 output files.
-            TSV is easier to access (i.e. open with text editor/Excel) and
-            quickly peruse, whereas HDF5 files must be accessed through
-            specific packages/viewers that support this format (e.g. h5py
-            Python package). Choose
-
-                * 'tsv' if your list of sequences is relatively small
-                  (:math:`10^4` or less in order of magnitude) and/or your
-                  model has a small number of features (<1000).
-                * 'hdf5' for anything larger and/or if you would like to
-                  access the predictions/scores as a matrix that you can
-                  easily filter, apply computations, or use in a subsequent
-                  classifier/model. In this case, you may access the matrix
-                  using `mat["data"]` after opening the HDF5 file using
-                  `mat = h5py.File("<output.h5>", 'r')`. The matrix columns
-                  are the features and will match the same ordering as your
-                  features .txt file (same as the order your model outputs
-                  its predictions) and the matrix rows are the sequences.
-                  Note that the row labels (FASTA description/IDs) will be
-                  output as a separate .txt file (should match the ordering
-                  of the sequences in the input FASTA).
-
-        Returns
-        -------
-        None
-            Writes the output to file(s) in `output_dir`.
-
-        """
+                                       input_path: str,
+                                       output_dir: str,
+                                       output_format: str = "tsv") -> None:
         os.makedirs(output_dir, exist_ok=True)
 
         _, filename = os.path.split(input_path)
@@ -403,63 +278,11 @@ class AnalyzeSequences(object):
         fasta_file.close()
         reporter.write_to_file()
 
-
     def get_predictions(self,
-                        input_path,
-                        output_dir=None,
-                        output_format="tsv",
-                        strand_index=None):
-        """
-        Get model predictions for sequences specified as a raw sequence,
-        FASTA, or BED file.
-
-        Parameters
-        ----------
-        input_path : str
-            A single sequence, or a path to the FASTA or BED file input.
-        output_dir : str, optional
-            Default is None. Output directory to write the model predictions.
-            If this is left blank a raw sequence input will be assumed, though
-            an output directory is required for FASTA and BED inputs.
-        output_format : {'tsv', 'hdf5'}, optional
-            Default is 'tsv'. Choose whether to save TSV or HDF5 output files.
-            TSV is easier to access (i.e. open with text editor/Excel) and
-            quickly peruse, whereas HDF5 files must be accessed through
-            specific packages/viewers that support this format (e.g. h5py
-            Python package). Choose
-
-                * 'tsv' if your list of sequences is relatively small
-                  (:math:`10^4` or less in order of magnitude) and/or your
-                  model has a small number of features (<1000).
-                * 'hdf5' for anything larger and/or if you would like to
-                  access the predictions/scores as a matrix that you can
-                  easily filter, apply computations, or use in a subsequent
-                  classifier/model. In this case, you may access the matrix
-                  using `mat["data"]` after opening the HDF5 file using
-                  `mat = h5py.File("<output.h5>", 'r')`. The matrix columns
-                  are the features and will match the same ordering as your
-                  features .txt file (same as the order your model outputs
-                  its predictions) and the matrix rows are the sequences.
-                  Note that the row labels (FASTA description/IDs) will be
-                  output as a separate .txt file (should match the ordering
-                  of the sequences in the input FASTA).
-
-        strand_index : int or None, optional
-            Default is None. If the trained model makes strand-specific
-            predictions, your input BED file may include a column with strand
-            information (strand must be one of {'+', '-', '.'}). Specify
-            the index (0-based) to use it. Otherwise, by default '+' is used.
-            (This parameter is ignored if FASTA file is used as input.)
-
-        Returns
-        -------
-        None
-            Writes the output to file(s) in `output_dir`. Filename will
-            match that specified in the filepath. In addition, if any base
-            in the given or retrieved sequence is unknown, the row labels .txt file
-            or .tsv file will mark this sequence or region as `contains_unk = True`.
-
-        """
+                        input_path: str,
+                        output_dir: str = None,
+                        output_format: str = "tsv",
+                        strand_index: int = None) -> None:
         if output_dir is None:
             sequence = self._pad_or_truncate_sequence(input_path)
             seq_enc = self.reference_sequence.sequence_to_encoding(sequence)
@@ -482,36 +305,6 @@ class AnalyzeSequences(object):
                                       base_preds,
                                       mutations_list,
                                       reporters=[]):
-        """
-        Get the predictions for all specified mutations applied
-        to a given sequence and, if applicable, compute the scores
-        ("abs_diffs", "diffs", "logits") for these mutations.
-
-        Parameters
-        ----------
-        sequence : str
-            The sequence to mutate.
-        base_preds : numpy.ndarray
-            The model's prediction for `sequence`.
-        mutations_list : list(list(tuple))
-            The mutations to apply to the sequence. Each element in
-            `mutations_list` is a list of tuples, where each tuple
-            specifies the `int` position in the sequence to mutate and what
-            `str` base to which the position is mutated (e.g. (1, 'A')).
-        reporters : list(PredictionsHandler)
-            The list of reporters, where each reporter handles the predictions
-            made for each mutated sequence. Will collect, compute scores
-            (e.g. `AbsDiffScoreHandler` computes the absolute difference
-            between `base_preds` and the predictions for the mutated
-            sequence), and output these as a file at the end.
-
-        Returns
-        -------
-        None
-            Writes results to files corresponding to each reporter in
-            `reporters`.
-
-        """
         current_sequence_encoding = self.reference_sequence.sequence_to_encoding(
             sequence)
         for i in range(0, len(mutations_list), self.batch_size):
@@ -548,56 +341,6 @@ class AnalyzeSequences(object):
                               output_format="tsv",
                               start_position=0,
                               end_position=None):
-        """
-        Applies *in silico* mutagenesis to a sequence.
-
-        Parameters
-        ----------
-        sequence : str
-            The sequence to mutate.
-        save_data : list(str)
-            A list of the data files to output. Must input 1 or more of the
-            following options: ["abs_diffs", "diffs", "logits", "predictions"].
-        output_path_prefix : str, optional
-            The path to which the data files are written. If directories in
-            the path do not yet exist they will be automatically created.
-        mutate_n_bases : int, optional
-            The number of bases to mutate at one time. We recommend leaving
-            this parameter set to `1` at this time, as we have not yet
-            optimized operations for double and triple mutations.
-        output_format : {'tsv', 'hdf5'}, optional
-            Default is 'tsv'. The desired output format.
-        start_position : int, optional
-            Default is 0. The starting position of the subsequence to be
-            mutated.
-        end_position : int or None, optional
-            Default is None. The ending position of the subsequence to be
-            mutated. If left as `None`, then `self.sequence_length` will be
-            used.
-
-        Returns
-        -------
-        None
-            Outputs data files from *in silico* mutagenesis to `output_dir`.
-            For HDF5 output and 'predictions' in `save_data`, an additional
-            file named `*_ref_predictions.h5` will be outputted with the
-            model prediction for the original input sequence.
-
-        Raises
-        ------
-        ValueError
-            If the value of `start_position` or `end_position` is negative.
-        ValueError
-            If there are fewer than `mutate_n_bases` between `start_position`
-            and `end_position`.
-        ValueError
-            If `start_position` is greater or equal to `end_position`.
-        ValueError
-            If `start_position` is not less than `self.sequence_length`.
-        ValueError
-            If `end_position` is greater than `self.sequence_length`.
-
-        """
         if end_position is None:
             end_position = self.sequence_length
         if start_position >= end_position:
@@ -628,13 +371,13 @@ class AnalyzeSequences(object):
             os.makedirs(path_dirs, exist_ok=True)
 
         n = len(sequence)
-        if n < self.sequence_length: # Pad string length as necessary.
-             diff = (self.sequence_length - n) / 2
-             pad_l = int(np.floor(diff))
-             pad_r = math.ceil(diff)
-             sequence = ((self.reference_sequence.UNK_BASE * pad_l) +
-                         sequence +
-                         (self.reference_sequence.UNK_BASE * pad_r))
+        if n < self.sequence_length:  # Pad string length as necessary.
+            diff = (self.sequence_length - n) / 2
+            pad_l = int(np.floor(diff))
+            pad_r = math.ceil(diff)
+            sequence = ((self.reference_sequence.UNK_BASE * pad_l) +
+                        sequence +
+                        (self.reference_sequence.UNK_BASE * pad_r))
         elif n > self.sequence_length:  # Extract center substring of proper length.
             start = int((n - self.sequence_length) // 2)
             end = int(start + self.sequence_length)
@@ -688,71 +431,6 @@ class AnalyzeSequences(object):
                                         output_format="tsv",
                                         start_position=0,
                                         end_position=None):
-        """
-        Apply *in silico* mutagenesis to all sequences in a FASTA file.
-
-        Please note that we have not parallelized this function yet, so runtime
-        increases exponentially when you increase `mutate_n_bases`.
-
-        Parameters
-        ----------
-        input_path: str
-            The path to the FASTA file of sequences.
-        save_data : list(str)
-            A list of the data files to output. Must input 1 or more of the
-            following options: ["abs_diffs", "diffs", "logits", "predictions"].
-        output_dir : str
-            The path to the output directory. Directories in the path will be
-            created if they do not currently exist.
-        mutate_n_bases : int, optional
-            Default is 1. The number of bases to mutate at one time in
-            *in silico* mutagenesis.
-        use_sequence_name : bool, optional.
-            Default is True. If `use_sequence_name`, output files are prefixed
-            by the sequence name/description corresponding to each sequence
-            in the FASTA file. Spaces in the sequence name are replaced with
-            underscores '_'. If not `use_sequence_name`, output files are
-            prefixed with an index :math:`i` (starting with 0) corresponding
-            to the :math:`i`th sequence in the FASTA file.
-        output_format : {'tsv', 'hdf5'}, optional
-            Default is 'tsv'. The desired output format. Each sequence in
-            the FASTA file will have its own set of output files, where
-            the number of output files depends on the number of `save_data`
-            predictions/scores specified.
-        start_position : int, optional
-            Default is 0. The starting position of the subsequence to be
-            mutated.
-        end_position : int or None, optional
-            Default is None. The ending position of the subsequence to be
-            mutated. If left as `None`, then `self.sequence_length` will be
-            used.
-
-
-
-
-        Returns
-        -------
-        None
-            Outputs data files from *in silico* mutagenesis to `output_dir`.
-            For HDF5 output and 'predictions' in `save_data`, an additional
-            file named `*_ref_predictions.h5` will be outputted with the
-            model prediction for the original input sequence.
-
-        Raises
-        ------
-        ValueError
-            If the value of `start_position` or `end_position` is negative.
-        ValueError
-            If there are fewer than `mutate_n_bases` between `start_position`
-            and `end_position`.
-        ValueError
-            If `start_position` is greater or equal to `end_position`.
-        ValueError
-            If `start_position` is not less than `self.sequence_length`.
-        ValueError
-            If `end_position` is greater than `self.sequence_length`.
-
-        """
         if end_position is None:
             end_position = self.sequence_length
         if start_position >= end_position:
@@ -798,7 +476,6 @@ class AnalyzeSequences(object):
             base_preds = predict(
                 self.model, base_encoding, use_cuda=self.use_cuda)
 
-            file_prefix = None
             if use_sequence_name:
                 file_prefix = os.path.join(
                     output_dir, fasta_record.name.replace(' ', '_'))
@@ -837,74 +514,6 @@ class AnalyzeSequences(object):
                                   output_format="tsv",
                                   strand_index=None,
                                   require_strand=False):
-        """
-        Get model predictions and scores for a list of variants.
-
-        Parameters
-        ----------
-        vcf_file : str
-            Path to a VCF file. Must contain the columns
-            [#CHROM, POS, ID, REF, ALT], in order. Column header does not need
-            to be present.
-        save_data : list(str)
-            A list of the data files to output. Must input 1 or more of the
-            following options: ["abs_diffs", "diffs", "logits", "predictions"].
-        output_dir : str or None, optional
-            Default is None. Path to the output directory. If no path is
-            specified, will save files corresponding to the options in
-            `save_data` to the current working directory.
-        output_format : {'tsv', 'hdf5'}, optional
-            Default is 'tsv'. Choose whether to save TSV or HDF5 output files.
-            TSV is easier to access (i.e. open with text editor/Excel) and
-            quickly peruse, whereas HDF5 files must be accessed through
-            specific packages/viewers that support this format (e.g. h5py
-            Python package). Choose
-
-                * 'tsv' if your list of variants is relatively small
-                  (:math:`10^4` or less in order of magnitude) and/or your
-                  model has a small number of features (<1000).
-                * 'hdf5' for anything larger and/or if you would like to
-                  access the predictions/scores as a matrix that you can
-                  easily filter, apply computations, or use in a subsequent
-                  classifier/model. In this case, you may access the matrix
-                  using `mat["data"]` after opening the HDF5 file using
-                  `mat = h5py.File("<output.h5>", 'r')`. The matrix columns
-                  are the features and will match the same ordering as your
-                  features .txt file (same as the order your model outputs
-                  its predictions) and the matrix rows are the sequences.
-                  Note that the row labels (chrom, pos, id, ref, alt) will be
-                  output as a separate .txt file.
-        strand_index : int or None, optional.
-            Default is None. If applicable, specify the column index (0-based)
-            in the VCF file that contains strand information for each variant.
-        require_strand : bool, optional.
-            Default is False. Whether strand can be specified as '.'. If False,
-            Selene accepts strand value to be '+', '-', or '.' and automatically
-            treats '.' as '+'. If True, Selene skips any variant with strand '.'.
-            This parameter assumes that `strand_index` has been set.
-
-        Returns
-        -------
-        None
-            Saves all files to `output_dir`. If any bases in the 'ref' column
-            of the VCF do not match those at the specified position in the
-            reference genome, the row labels .txt file will mark this variant
-            as `ref_match = False`. If most of your variants do not match
-            the reference genome, please check that the reference genome
-            you specified matches the version with which the variants were
-            called. The predictions can used directly if you have verified that
-            the 'ref' bases specified for these variants are correct (Selene
-            will have substituted these bases for those in the reference
-            genome). In addition, if any base in the retrieved reference
-            sequence is unknown, the row labels .txt file will mark this variant
-            as `contains_unk = True`. Finally, some variants may show up in an
-            'NA' file. This is because the surrounding sequence context ended up
-            being out of bounds or overlapping with blacklist regions  or the
-            chromosome containing the variant did not show up in the reference
-            genome FASTA file.
-
-        """
-        # TODO: GIVE USER MORE CONTROL OVER PREFIX.
         path, filename = os.path.split(vcf_file)
         output_path_prefix = '.'.join(filename.split('.')[:-1])
         if output_dir:
@@ -933,8 +542,7 @@ class AnalyzeSequences(object):
         batch_ids = []
         t_i = time()
         for ix, (chrom, pos, name, ref, alt, strand) in enumerate(variants):
-            # centers the sequence containing the ref allele based on the size
-            # of ref
+            # centers the sequence containing the ref allele based on the size of ref
             center = pos + len(ref) // 2
             start = center - self._start_radius
             end = center + self._end_radius
@@ -966,10 +574,10 @@ class AnalyzeSequences(object):
 
             if contains_unk:
                 warnings.warn("For variant ({0}, {1}, {2}, {3}, {4}, {5}), "
-                           "reference sequence contains unknown base(s)"
-                           "--will be marked `True` in the `contains_unk` column "
-                           "of the .tsv or the row_labels .txt file.".format(
-                             chrom, pos, name, ref, alt, strand))
+                              "reference sequence contains unknown base(s)"
+                              "--will be marked `True` in the `contains_unk` column "
+                              "of the .tsv or the row_labels .txt file."
+                              .format(chrom, pos, name, ref, alt, strand))
             if not match:
                 warnings.warn("For variant ({0}, {1}, {2}, {3}, {4}, {5}), "
                               "reference does not match the reference genome. "
@@ -977,8 +585,8 @@ class AnalyzeSequences(object):
                               "Predictions/scores associated with this "
                               "variant--where we use '{3}' in the input "
                               "sequence--will be marked `False` in the `ref_match` "
-                              "column of the .tsv or the row_labels .txt file".format(
-                                  chrom, pos, name, ref, alt, strand, seq_at_ref))
+                              "column of the .tsv or the row_labels .txt file"
+                              .format(chrom, pos, name, ref, alt, strand, seq_at_ref))
             batch_ids.append((chrom, pos, name, ref, alt, strand, match, contains_unk))
             if strand == '-':
                 ref_sequence_encoding = get_reverse_complement_encoding(
@@ -1030,5 +638,4 @@ class AnalyzeSequences(object):
             )
         elif len(sequence) > self.sequence_length:
             sequence = _truncate_sequence(sequence, self.sequence_length)
-
         return sequence

@@ -3,18 +3,17 @@ import logging
 import sys
 
 import numpy as np
+from torch.nn import Module
 
 from .multi_model_wrapper import MultiModelWrapper
 
 
-def _is_lua_trained_model(model):
-    if hasattr(model, 'from_lua'):
-        return model.from_lua
+def _is_lua_trained_model(model: Module):
+    if hasattr(model, 'from_lua'): return model.from_lua
     check_model = model
     if hasattr(model, 'model'):
         check_model = model.model
-    elif type(model) == MultiModelWrapper and \
-            hasattr(model, 'sub_models'):
+    elif type(model) == MultiModelWrapper and hasattr(model, 'sub_models'):
         check_model = model.sub_models[0]
     setattr(model, "from_lua", False)
     setattr(check_model, "from_lua", False)
@@ -76,39 +75,6 @@ def load_model_from_state_dict(state_dict, model):
 
 
 def load_features_list(input_path):
-    """
-    Reads in a file of distinct feature names line-by-line and returns
-    these features as a list. Each feature name in the file must occur
-    on a separate line.
-
-    Parameters
-    ----------
-    input_path : str
-        Path to the features file. Each feature in the input file must
-        be on its own line.
-
-    Returns
-    -------
-    list(str) \
-        The list of features. The features will appear in the list in
-        the same order they appeared in the file (reading from top to
-        bottom).
-
-    Examples
-    --------
-    A file at "input_features.txt", for the feature names :math:`YFP`
-    and :math:`YFG` might look like this:
-    ::
-        YFP
-        YFG
-
-
-    We can load these features from that file as follows:
-
-    >>> load_features_list("input_features.txt")
-    ["YFP", "YFG"]
-
-    """
     features = []
     with open(input_path, 'r') as file_handle:
         for line in file_handle:
