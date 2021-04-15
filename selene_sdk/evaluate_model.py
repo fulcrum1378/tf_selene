@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch.nn import DataParallel
 from torch.autograd import Variable
 
 from .sequences import Genome
@@ -71,7 +71,7 @@ class EvaluateModel(object):
 
         self.data_parallel = data_parallel
         if self.data_parallel:
-            self.model = nn.DataParallel(model)
+            self.model = DataParallel(model)
             logger.debug("Wrapped model in DataParallel")
 
         self.use_cuda = use_cuda

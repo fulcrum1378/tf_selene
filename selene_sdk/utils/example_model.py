@@ -61,5 +61,4 @@ def criterion():
 
 
 def get_optimizer(lr):
-    return (torch.optim.SGD,
-            {"lr": lr, "weight_decay": 1e-6, "momentum": 0.9})
+    return torch.optim.SGD, {"lr": lr, "weight_decay": 1e-6, "momentum": 0.9}

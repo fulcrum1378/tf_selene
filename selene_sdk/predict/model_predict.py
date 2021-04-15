@@ -1,7 +1,3 @@
-"""
-This module provides the `AnalyzeSequences` class and supporting
-methods.
-"""
 import math
 import os
 import warnings
@@ -48,9 +44,6 @@ class AnalyzeSequences(object):
                  data_parallel=False,
                  reference_sequence=Genome,
                  write_mem_limit=1500):
-        """
-        Constructs a new `AnalyzeSequences` object.
-        """
         self.model = model
 
         if isinstance(trained_model_path, str):
@@ -188,39 +181,6 @@ class AnalyzeSequences(object):
                                      strand_index=None,
                                      output_NAs_to_file=None,
                                      reference_sequence=None):
-        """
-        Get the adjusted sequence coordinates and labels corresponding
-        to each row of coordinates in an input BED file. The coordinates
-        specified in each row are only used to find the center position
-        for the resulting sequence--all regions returned will have the
-        length expected by the model.
-
-        Parameters
-        ----------
-        input_path : str
-            Input filepath to BED file.
-        strand_index : int or None, optional
-            Default is None. If sequences must be strand-specific,
-            the input BED file may include a column specifying the
-            strand ({'+', '-', '.'}).
-        output_NAs_to_file : str or None, optional
-            Default is None. Only used if `reference_sequence` is also not None.
-            Specify a filepath to which invalid variants are written.
-            Invalid = sequences that cannot be fetched, either because
-            the exact chromosome cannot be found in the `reference_sequence` FASTA
-            file or because the sequence retrieved is out of bounds or overlapping
-            with any of the blacklist regions.
-        reference_sequence : selene_sdk.sequences.Genome or None, optional
-            Default is None. The reference genome.
-
-        Returns
-        -------
-        list(tup), list(tup)
-            The sequence query information (chrom, start, end, strand)
-            and the labels (the index, genome coordinates, and sequence
-            specified in the BED file).
-
-        """
         sequences = []
         labels = []
         na_rows = []
