@@ -2,12 +2,12 @@ import math
 import os
 import warnings
 from time import time
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import pyfaidx
-import torch
-from torch.nn import DataParallel, Module
+import tensorflow as tf
+from torch import load
 
 from ._common import _pad_sequence
 from ._common import _truncate_sequence
@@ -27,7 +27,6 @@ from .predict_handlers import LogitScoreHandler
 from .predict_handlers import WritePredictionsHandler
 from .predict_handlers import WriteRefAltHandler
 from ..sequences import Genome
-# noinspection PyProtectedMember
 from ..utils import _is_lua_trained_model
 from ..utils import load_model_from_state_dict
 
@@ -37,19 +36,19 @@ VARIANTEFFECT_COLS = ["chrom", "pos", "name", "ref", "alt", "strand", "ref_match
 
 class AnalyzeSequences(object):
     def __init__(self,
-                 model: Module,
+                 model: tf.Module,
                  trained_model_path,  # str or List[str]
                  sequence_length: int,
                  features: List[str],
                  batch_size: int = 64,
                  use_cuda: bool = False,
-                 data_parallel: bool = False,
+                 # data_parallel: bool = False,
                  reference_sequence=Genome,
                  write_mem_limit: int = 1500):
         self.model = model
 
         if isinstance(trained_model_path, str):
-            trained_model = torch.load(
+            trained_model = load(
                 trained_model_path,
                 map_location=lambda storage, location: storage)
 
@@ -58,7 +57,7 @@ class AnalyzeSequences(object):
         elif hasattr(trained_model_path, '__len__'):
             state_dicts = []
             for mp in trained_model_path:
-                state_dict = torch.load(
+                state_dict = load(
                     mp, map_location=lambda storage, location: storage)
                 state_dicts.append(state_dict)
 
@@ -71,10 +70,6 @@ class AnalyzeSequences(object):
                 'type {0}.'.format(type(trained_model_path)))
 
         self.model.eval()
-
-        self.data_parallel = data_parallel
-        if self.data_parallel:
-            self.model = DataParallel(model)
 
         self.use_cuda = use_cuda
         if self.use_cuda: self.model.cuda()
@@ -105,7 +100,7 @@ class AnalyzeSequences(object):
                               colnames_for_ids,
                               output_size=None,
                               mode="ism"):
-        save_data = set(save_data) & set(["diffs", "abs_diffs", "logits", "predictions"])
+        save_data = set(save_data) & {"diffs", "abs_diffs", "logits", "predictions"}
         save_data = sorted(list(save_data))
         if len(save_data) == 0:
             raise ValueError("'save_data' parameter must be a list that "
@@ -143,7 +138,7 @@ class AnalyzeSequences(object):
                                      input_path,
                                      strand_index=None,
                                      output_NAs_to_file=None,
-                                     reference_sequence=None):
+                                     reference_sequence=None) -> Tuple:
         sequences = []
         labels = []
         na_rows = []
@@ -513,7 +508,7 @@ class AnalyzeSequences(object):
                                   output_dir=None,
                                   output_format="tsv",
                                   strand_index=None,
-                                  require_strand=False):
+                                  require_strand=False) -> None:
         path, filename = os.path.split(vcf_file)
         output_path_prefix = '.'.join(filename.split('.')[:-1])
         if output_dir:
@@ -629,7 +624,7 @@ class AnalyzeSequences(object):
         for r in reporters:
             r.write_to_file()
 
-    def _pad_or_truncate_sequence(self, sequence):
+    def _pad_or_truncate_sequence(self, sequence: str) -> str:
         if len(sequence) < self.sequence_length:
             sequence = _pad_sequence(
                 sequence,

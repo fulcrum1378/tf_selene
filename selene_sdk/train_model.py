@@ -7,8 +7,8 @@ from time import time
 from typing import Dict, Tuple
 
 import numpy as np
-from tensorflow import Module, Tensor, Variable
-from torch import load, save, set_num_threads
+import tensorflow as tf
+from torch import load, save
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
@@ -34,7 +34,7 @@ def _metrics_logger(name, out_filepath) -> logging:
 
 class TrainModel(object):
     def __init__(self,
-                 model: Module,
+                 model: tf.Module,
                  data_sampler: Sampler,
                  loss_criterion,  # extends torch.nn._Loss
                  optimizer_class,  # extends torch.nn.Optimizer
@@ -77,7 +77,7 @@ class TrainModel(object):
                                                           self.nth_step_report_stats,
                                                           self.max_steps))
 
-        set_num_threads(cpu_n_threads)
+        tf.config.threading.set_intra_op_parallelism_threads(cpu_n_threads)
 
         self.use_cuda = use_cuda
 
@@ -132,7 +132,7 @@ class TrainModel(object):
         if self.use_cuda:
             for state in self.optimizer.state.values():
                 for k, v in state.items():
-                    if isinstance(v, Tensor):
+                    if isinstance(v, tf.Tensor):
                         state[k] = v.cuda()
 
         logger.info("Resuming from checkpoint: step {0}, min loss {1}".format(
@@ -144,12 +144,7 @@ class TrainModel(object):
             "{0}.train".format(__name__), self.output_dir)
         self._train_logger.info("loss")
         if self._use_scheduler:
-            self.scheduler = ReduceLROnPlateau(
-                self.optimizer,
-                'min',
-                patience=16,
-                verbose=True,
-                factor=0.8)
+            self.scheduler = ReduceLROnPlateau(self.optimizer, patience=16, verbose=True, factor=0.8)
         self._time_per_step = []
         self._train_loss = []
 
@@ -246,15 +241,15 @@ class TrainModel(object):
         self.sampler.set_mode("train")
 
         inputs, targets = self._get_batch()
-        inputs = Tensor(inputs)
-        targets = Tensor(targets)
+        inputs = tf.Tensor(inputs)
+        targets = tf.Tensor(targets)
 
         if self.use_cuda:
             inputs = inputs.cuda()
             targets = targets.cuda()
 
-        inputs = Variable(inputs)
-        targets = Variable(targets)
+        inputs = tf.Variable(inputs)
+        targets = tf.Variable(targets)
 
         predictions = self.model(inputs.transpose(1, 2))
         loss = self.criterion(predictions, targets)
@@ -282,15 +277,15 @@ class TrainModel(object):
         all_predictions = []
 
         for (inputs, targets) in data_in_batches:
-            inputs = Tensor(inputs)
-            targets = Tensor(targets)
+            inputs = tf.Tensor(inputs)
+            targets = tf.Tensor(targets)
 
             if self.use_cuda:
                 inputs = inputs.cuda()
                 targets = targets.cuda()
 
-            inputs = Variable(inputs, trainable=False)
-            targets = Variable(targets, trainable=False)
+            inputs = tf.Variable(inputs, trainable=False)
+            targets = tf.Variable(targets, trainable=False)
 
             predictions = self.model(inputs.transpose(1, 2))
             loss = self.criterion(predictions, targets)

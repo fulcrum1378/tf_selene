@@ -1,9 +1,8 @@
 import math
 
 import numpy as np
-from tensorflow import Module, Tensor, Variable
+import tensorflow as tf
 
-# noinspection PyProtectedMember
 from ..utils import _is_lua_trained_model
 
 
@@ -23,11 +22,11 @@ def get_reverse_complement_encoding(allele_encoding, bases_arr, complementary_ba
     return allele_encoding[:, complement_indices][::-1, :]
 
 
-def predict(model: Module, batch_sequences, use_cuda: bool = False):
-    inputs = Tensor(batch_sequences)
+def predict(model: tf.Module, batch_sequences, use_cuda: bool = False):
+    inputs = tf.Tensor(batch_sequences)
     if use_cuda:
         inputs = inputs.cuda()
-    inputs = Variable(inputs, trainable=False)
+    inputs = tf.Variable(inputs, trainable=False)
     if _is_lua_trained_model(model):
         outputs = model.forward(inputs.transpose(1, 2).contiguous().unsqueeze_(2))
     else:
@@ -35,7 +34,7 @@ def predict(model: Module, batch_sequences, use_cuda: bool = False):
     return outputs.data.cpu().numpy()
 
 
-def _pad_sequence(sequence, to_length, unknown_base):
+def _pad_sequence(sequence: str, to_length: int, unknown_base: str) -> str:
     diff = (to_length - len(sequence)) / 2
     pad_l = int(np.floor(diff))
     pad_r = math.ceil(diff)
@@ -43,7 +42,7 @@ def _pad_sequence(sequence, to_length, unknown_base):
     return str.upper(sequence)
 
 
-def _truncate_sequence(sequence, to_length):
+def _truncate_sequence(sequence, to_length) -> str:
     start = int((len(sequence) - to_length) // 2)
     end = int(start + to_length)
     return str.upper(sequence[start:end])

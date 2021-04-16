@@ -1,5 +1,4 @@
-import torch
-from torch.nn.modules import Module
+import tensorflow as tf
 
 from . import _is_lua_trained_model
 
@@ -9,14 +8,12 @@ def _flip(x, dim):
     dim = x.dim() + dim if dim < 0 else dim
     x = x.contiguous()
     x = x.view(-1, *xsize[dim:])
-    x = x.view(
-        x.size(0), x.size(1), -1)[:, getattr(
-        torch.arange(x.size(1) - 1, -1, -1),
-        ('cpu', 'cuda')[x.is_cuda])().long(), :]
+    x = x.view(x.size(0), x.size(1), -1)[:, getattr(
+        tf.experimental.numpy.arange(x.size(1) - 1, -1, -1), ('cpu', 'cuda')[x.is_cuda])().long(), :]
     return x.view(xsize)
 
 
-class NonStrandSpecific(Module):
+class NonStrandSpecific(tf.Module):
     def __init__(self, model, mode="mean"):
         super(NonStrandSpecific, self).__init__()
 
@@ -28,18 +25,17 @@ class NonStrandSpecific(Module):
         self.mode = mode
         self.from_lua = _is_lua_trained_model(model)
 
-    def forward(self, input):
-        reverse_input = None
+    def forward(self, my_input):
         if self.from_lua:
             reverse_input = _flip(
-                _flip(torch.squeeze(input, 2), 1), 2).unsqueeze_(2)
+                _flip(tf.squeeze(my_input, 2), 1), 2).unsqueeze_(2)
         else:
-            reverse_input = _flip(_flip(input, 1), 2)
+            reverse_input = _flip(_flip(my_input, 1), 2)
 
-        output = self.model.forward(input)
+        output = self.model.forward(my_input)
         output_from_rev = self.model.forward(reverse_input)
 
         if self.mode == "mean":
             return (output + output_from_rev) / 2
         else:
-            return torch.max(output, output_from_rev)
+            return tf.math.reduce_max(output, output_from_rev)

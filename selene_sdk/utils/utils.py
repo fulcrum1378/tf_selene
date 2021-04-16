@@ -3,12 +3,12 @@ import logging
 import sys
 
 import numpy as np
-from tensorflow import Module
+import tensorflow as tf
 
 from .multi_model_wrapper import MultiModelWrapper
 
 
-def _is_lua_trained_model(model: Module):
+def _is_lua_trained_model(model: tf.Module):
     if hasattr(model, 'from_lua'): return model.from_lua
     check_model = model
     if hasattr(model, 'model'):
@@ -39,7 +39,7 @@ def get_indices_and_probabilities(interval_lengths, indices):
             interval_lengths, keep_indices)
 
 
-def load_model_from_state_dict(state_dict, model: Module):
+def load_model_from_state_dict(state_dict, model: tf.Module):
     if 'state_dict' in state_dict:
         state_dict = state_dict['state_dict']
 

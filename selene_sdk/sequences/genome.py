@@ -12,7 +12,7 @@ def _not_blacklist_region(chrom, start, end, blacklist_tabix):
     if blacklist_tabix is not None:
         try:
             rows = blacklist_tabix.query(chrom, start, end)
-            for row in rows:
+            for _ in rows:
                 return False
         except tabix.TabixError:
             pass
@@ -40,9 +40,7 @@ def _get_sequence_from_coords(len_chrs, genome_sequence, chrom, start, end, stra
         return ""
 
     if strand != '+' and strand != '-' and strand != '.':
-        raise ValueError(
-            "Strand must be one of '+', '-', or '.'. Input was {0}".format(
-                strand))
+        raise ValueError("Strand must be one of '+', '-', or '.'. Input was {0}".format(strand))
 
     end_pad = 0
     start_pad = 0
@@ -121,12 +119,12 @@ class Genome(Sequence):
                     self.blacklist_regions)
             self._initialized = True
 
-    def init(func):
+    def init(self):
         # delay initialization to allow  multiprocessing
-        @wraps(func)
+        @wraps(self)
         def dfunc(self, *args, **kwargs):
             self._unpicklable_init()
-            return func(self, *args, **kwargs)
+            return self(self, *args, **kwargs)
 
         return dfunc
 

@@ -4,12 +4,11 @@ from typing import Dict, List
 import warnings
 
 import numpy as np
-from tensorflow import Module, Tensor, Variable
+import tensorflow as tf
 from torch import load
 
 from .samplers import Sampler
 from .sequences import Genome
-# noinspection PyProtectedMember
 from .utils import _is_lua_trained_model
 from .utils import initialize_logger
 from .utils import load_model_from_state_dict
@@ -20,7 +19,7 @@ logger = logging.getLogger("selene")
 
 class EvaluateModel(object):
     def __init__(self,
-                 model: Module,
+                 model: tf.Module,
                  criterion,  # extends torch.nn._Loss
                  data_sampler: Sampler,  # must be a subclass of Sampler NOT itself
                  features: List[str],
@@ -92,15 +91,15 @@ class EvaluateModel(object):
         batch_losses = []
         all_predictions = []
         for (inputs, targets) in self._test_data:
-            inputs = Tensor(inputs)
-            targets = Tensor(targets[:, self._use_ixs])
+            inputs = tf.Tensor(inputs)
+            targets = tf.Tensor(targets[:, self._use_ixs])
 
             if self.use_cuda:
                 inputs = inputs.cuda()
                 targets = targets.cuda()
 
-            inputs = Variable(inputs, trainable=False)
-            targets = Variable(targets, trainable=False)
+            inputs = tf.Variable(inputs, trainable=False)
+            targets = tf.Variable(targets, trainable=False)
 
             if _is_lua_trained_model(self.model):
                 predictions = self.model.forward(
