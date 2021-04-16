@@ -1,10 +1,9 @@
 import sys
 
+from functools import wraps
 import h5py
 import numpy as np
-import torch
-
-from functools import wraps
+import tensorflow as tf
 from torch.utils.data import Dataset, DataLoader
 
 
@@ -102,8 +101,8 @@ class _H5Dataset(Dataset):
                 targets = targets[:, :self.t_len]
             else:
                 targets = targets[:self.t_len]
-        return (torch.from_numpy(sequence.astype(np.float32)),
-                torch.from_numpy(targets.astype(np.float32)))
+        return (tf.convert_to_tensor(sequence.astype(np.float32)),
+                tf.convert_to_tensor(targets.astype(np.float32)))
 
     @init
     def __len__(self):

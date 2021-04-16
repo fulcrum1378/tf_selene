@@ -1,8 +1,8 @@
 # torch.arange()                                   => tf.experimental.numpy.arange()
 # torch.autograd.Variable()                        => tf.Variable()
-# torch.cat()                                      =>
+# torch.cat()                                      => tf.concat()
 # torch.cuda.manual_seed_all()                     =>
-# torch.from_numpy()                               =>
+# torch.from_numpy()                               => tf.convert_to_tensor()
 # torch.load()                                     =>
 # torch.manual_seed()                              =>
 # torch.max()                                      => tf.math.reduce_max()
@@ -14,12 +14,12 @@
 # torch.nn.Dropout()                               =>
 # torch.nn.Linear()                                =>
 # torch.nn.MaxPool1d()                             =>
-# torch.nn.Module()                                =>
+# torch.nn.Module()                                => tf.Module (BADLY REPLACED!!)
 # torch.nn.ReLU()                                  =>
 # torch.nn.Sequential()                            =>
 # torch.nn.Sigmoid()                               =>
 # torch.no_grad()                                  => INSIDE tf.Variable() SET trainable=False
-# torch.optim.Optimizer()                          =>
+# torch.optim.Optimizer()                          => tf.keras.optimizers.Optimizer() (MAYBE!!)
 # torch.optim.lr_scheduler.ReduceLROnPlateau()     =>
 # torch.optim.SGD                                  =>
 # torch.save()                                     =>

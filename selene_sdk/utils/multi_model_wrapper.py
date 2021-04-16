@@ -1,8 +1,7 @@
-import torch
-import torch.nn as nn
+import tensorflow as tf
 
 
-class MultiModelWrapper(nn.Module):
+class MultiModelWrapper(tf.Module):
     def __init__(self, sub_models, concat_dim=1):
         super(MultiModelWrapper, self).__init__()
         self.sub_models = sub_models
@@ -17,5 +16,4 @@ class MultiModelWrapper(nn.Module):
             sm.eval()
 
     def forward(self, x):
-        return torch.cat(
-            [sm(x) for sm in self.sub_models], self._concat_dim)
+        return tf.concat([sm(x) for sm in self.sub_models], self._concat_dim)

@@ -1,5 +1,9 @@
 import selene_sdk as s
 
+x = int
+
+print(x("12") + 1)
+
 import torch as ch
 import tensorflow as tf
 

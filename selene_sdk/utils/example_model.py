@@ -1,9 +1,10 @@
 import numpy as np
+import tensorflow as tf
 import torch
 import torch.nn as nn
 
 
-class DeeperDeepSEA(nn.Module):
+class DeeperDeepSEA(tf.Module):
     def __init__(self, sequence_length, n_targets):
         super(DeeperDeepSEA, self).__init__()
         conv_kernel_size = 8

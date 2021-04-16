@@ -4,7 +4,7 @@ import os
 import shutil
 from time import strftime
 from time import time
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
@@ -34,10 +34,10 @@ def _metrics_logger(name, out_filepath) -> logging:
 
 class TrainModel(object):
     def __init__(self,
-                 model: tf.Module,
+                 model: Type[tf.Module],
                  data_sampler: Sampler,
                  loss_criterion,  # extends torch.nn._Loss
-                 optimizer_class,  # extends torch.nn.Optimizer
+                 optimizer_class: Type[tf.keras.optimizers.Optimizer],
                  optimizer_kwargs: Dict,
                  batch_size: int,
                  max_steps: int,
@@ -57,7 +57,8 @@ class TrainModel(object):
         self.model = model
         self.sampler = data_sampler
         self.criterion = loss_criterion
-        self.optimizer = optimizer_class(self.model.parameters(), **optimizer_kwargs)
+        self.optimizer = tf.keras.optimizers.get(
+            optimizer_class.__class__.__name__)(self.model.parameters(), **optimizer_kwargs)
 
         self.batch_size = batch_size
         self.max_steps = max_steps
