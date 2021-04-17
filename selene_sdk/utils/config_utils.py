@@ -37,7 +37,6 @@ def initialize_model(model_configs, train=True, lr=None):
     import_model_from = model_configs["path"]
     model_class_name = model_configs["class"]
 
-    module = None
     if os.path.isdir(import_model_from):
         module = module_from_dir(import_model_from)
     else:
@@ -148,9 +147,7 @@ def execute(operations, configs, output_dir):
                 analyze_seqs.get_predictions(**predict_info)
 
 
-def parse_configs_and_run(configs,
-                          create_subdirectory=True,
-                          lr=None):
+def parse_configs_and_run(configs, create_subdirectory=True, lr=None):
     operations = configs["ops"]
 
     if "train" in operations and "lr" not in configs and lr != "None":

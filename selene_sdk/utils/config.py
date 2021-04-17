@@ -1,15 +1,15 @@
+from collections import namedtuple
 import os
 import re
+import six
+from typing import Dict
 import warnings
 import yaml
-import six
-from collections import namedtuple
 
 SCIENTIFIC_NOTATION_REGEXP = r"^[\-\+]?(\d+\.?\d*|\d*\.?\d+)?[eE][\-\+]?\d+$"
 IS_INITIALIZED = False
 
-_BaseProxy = namedtuple("_BaseProxy", ["callable", "positionals", "keywords",
-                                       "yaml_src"])
+_BaseProxy = namedtuple("_BaseProxy", ["callable", "positionals", "keywords", "yaml_src"])
 
 
 class _Proxy(_BaseProxy):
@@ -35,32 +35,26 @@ def _instantiate_proxy_tuple(proxy, bindings=None):
     if proxy in bindings:
         return bindings[proxy]
     else:
-        # Respect _do_not_recurse by just un-packing it (same as calling).
         if proxy.callable == _do_not_recurse:
             obj = proxy.keywords['value']
         else:
             if len(proxy.positionals) > 0:
-                raise NotImplementedError('positional arguments not yet '
-                                          'supported in proxy instantiation')
+                raise NotImplementedError('positional arguments not yet supported in proxy instantiation')
             kwargs = dict((k, instantiate(v, bindings))
                           for k, v in six.iteritems(proxy.keywords))
             obj = proxy.callable(**kwargs)
         try:
             obj.yaml_src = proxy.yaml_src
-        except AttributeError:  # Some classes won't allow this.
+        except AttributeError:
             pass
         bindings[proxy] = obj
         return bindings[proxy]
 
 
 def _preprocess(string, environ=None):
-    if environ is None:
-        environ = {}
-
+    if environ is None: environ = {}
     split = string.split('${')
-
     rval = [split[0]]
-
     for candidate in split[1:]:
         subsplit = candidate.split('}')
 
@@ -72,13 +66,9 @@ def _preprocess(string, environ=None):
         val = (environ[varname] if varname in environ
                else os.environ[varname])
         rval.append(val)
-
         rval.append('}'.join(subsplit[1:]))
 
     rval = ''.join(rval)
-
-    string = os.path.expanduser(string)
-
     return rval
 
 
@@ -88,25 +78,19 @@ def instantiate(proxy, bindings=None):
     if isinstance(proxy, _Proxy):
         return _instantiate_proxy_tuple(proxy, bindings)
     elif isinstance(proxy, dict):
-        # Recurse on the keys too, for backward compatibility.
-        # Is the key instantiation feature ever actually used, by anyone?
         return dict((instantiate(k, bindings), instantiate(v, bindings))
                     for k, v in six.iteritems(proxy))
     elif isinstance(proxy, list):
         return [instantiate(v, bindings) for v in proxy]
-    # In the future it might be good to consider a dict argument that provides
-    # a type->callable mapping for arbitrary transformations like this.
     elif isinstance(proxy, six.string_types):
         return _preprocess(proxy)
     else:
         return proxy
 
 
-def load(stream, environ=None, instantiate=True, **kwargs):
+def load(stream, environ=None, instantiate=True, **kwargs) -> Dict:
     global IS_INITIALIZED
-    if not IS_INITIALIZED:
-        _initialize()
-
+    if not IS_INITIALIZED: _initialize()
     if isinstance(stream, six.string_types):
         string = stream
     else:
@@ -114,17 +98,11 @@ def load(stream, environ=None, instantiate=True, **kwargs):
     return yaml.load(string, Loader=yaml.SafeLoader, **kwargs)
 
 
-def load_path(path, environ=None, instantiate=False, **kwargs):
+def load_path(path, environ=None, instantiate=False, **kwargs) -> Dict:
     with open(path, 'r') as f:
         content = ''.join(f.readlines())
-
-    # This is apparently here to avoid the odd instance where a file gets
-    # loaded as Unicode instead (see 03f238c6d). It's rare instance where
-    # basestring is not the right call.
     if not isinstance(content, str):
-        raise AssertionError("Expected content to be of type str, got " +
-                             str(type(content)))
-
+        raise AssertionError("Expected content to be of type str, got " + str(type(content)))
     return load(content, instantiate=instantiate, environ=environ, **kwargs)
 
 
@@ -134,22 +112,12 @@ def _try_to_import(tag_suffix):
     try:
         exec("import {0}".format(module_name))
     except ImportError as e:
-        # We know it's an ImportError, but is it an ImportError related to
-        # this path,
-        # or did the module we're importing have an unrelated ImportError?
-        # and yes, this test can still have false positives, feel free to
-        # improve it
         pieces = module_name.split('.')
         str_e = str(e)
         found = True in [piece.find(str(e)) != -1 for piece in pieces]
 
         if found:
-            # The yaml file is probably to blame.
-            # Report the problem with the full module path from the YAML
-            # file
-            raise ImportError(
-                "Could not import {0}; ImportError was {1}".format(
-                    module_name, str_e))
+            raise ImportError("Could not import {0}; ImportError was {1}".format(module_name, str_e))
         else:
             pcomponents = components[:-1]
             assert len(pcomponents) >= 1
@@ -163,48 +131,32 @@ def _try_to_import(tag_suffix):
                     if j > 1:
                         module_name = '.'.join(pcomponents[:j - 1])
                         base_msg += " but could import {0}".format(module_name)
-                    raise ImportError(
-                        "{0}. Original exception: {1}".format(base_msg,
-                                                              str(e)))
+                    raise ImportError("{0}. Original exception: {1}".format(base_msg, str(e)))
                 j += 1
     try:
         obj = eval(tag_suffix)
     except AttributeError as e:
         try:
-            # Try to figure out what the wrong field name was
-            # If we fail to do it, just fall back to giving the usual
-            # attribute error
             pieces = tag_suffix.split('.')
             module = '.'.join(pieces[:-1])
-            field = pieces[-1]
             candidates = dir(eval(module))
-
             msg = ("Could not evaluate {0}. "
                    "Did you mean {1}? "
-                   "Original error was {2}".format(
-                tag_suffix, candidates, str(e)
-            ))
-
+                   "Original error was {2}".format(tag_suffix, candidates, str(e)))
         except Exception:
             warnings.warn("Attempt to decipher AttributeError failed")
-            raise AttributeError("Could not evaluate {0}. " +
-                                 "Original error was {1}".format(
-                                     tag_suffix, str(e)))
+            raise AttributeError("Could not evaluate {0}. Original error was {1}".format(tag_suffix, str(e)))
         raise AttributeError(msg)
     return obj
 
 
 def _initialize():
     global IS_INITIALIZED
-    yaml.add_multi_constructor(
-        "!obj:", _multi_constructor_obj, Loader=yaml.SafeLoader)
-    yaml.add_multi_constructor(
-        "!import:", _multi_constructor_import, Loader=yaml.SafeLoader)
+    yaml.add_multi_constructor("!obj:", _multi_constructor_obj, Loader=yaml.SafeLoader)
+    yaml.add_multi_constructor("!import:", _multi_constructor_import, Loader=yaml.SafeLoader)
 
-    yaml.add_constructor(
-        "!import", _constructor_import, Loader=yaml.SafeLoader)
-    yaml.add_constructor(
-        "!float", _constructor_float, Loader=yaml.SafeLoader)
+    yaml.add_constructor("!import", _constructor_import, Loader=yaml.SafeLoader)
+    yaml.add_constructor("!float", _constructor_float, Loader=yaml.SafeLoader)
 
     pattern = re.compile(SCIENTIFIC_NOTATION_REGEXP)
     yaml.add_implicit_resolver("!float", pattern)
@@ -224,12 +176,10 @@ def _multi_constructor_obj(loader, tag_suffix, node):
             raise TypeError(
                 "Received non string object ({0}) as key in mapping.".format(str(key)))
     if '.' not in tag_suffix:
-        # I'm not sure how this was ever working without eval().
         callable = eval(tag_suffix)
     else:
         callable = _try_to_import(tag_suffix)
-    rval = _Proxy(callable=callable, yaml_src=yaml_src, positionals=(),
-                  keywords=mapping)
+    rval = _Proxy(callable=callable, yaml_src=yaml_src, positionals=(), keywords=mapping)
     return rval
 
 
@@ -250,13 +200,9 @@ def _constructor_float(loader, node):
     return float(loader.construct_scalar(node))
 
 
-def _construct_mapping(node, deep=False):
+def _construct_mapping(node):  # , deep=False
     if not isinstance(node, yaml.nodes.MappingNode):
-        const = yaml.constructor
-        raise Exception(
-            "Expected a mapping node, but found {0} {1}.".format(
-                node.id, node.start_mark
-            ))
+        raise Exception("Expected a mapping node, but found {0} {1}.".format(node.id, node.start_mark))
     mapping = {}
     constructor = yaml.constructor.BaseConstructor()
     for key_node, value_node in node.value:
@@ -264,13 +210,11 @@ def _construct_mapping(node, deep=False):
         try:
             hash(key)
         except TypeError as exc:
-            const = yaml.constructor
             raise Exception("While constructing a mapping " +
                             "{0}, found unacceptable " +
                             "key ({1}).".format(
                                 node.start_mark, (exc, key_node.start_mark)))
         if key in mapping:
-            const = yaml.constructor
             raise Exception("While constructing a mapping " +
                             "{0}, found duplicate " +
                             "key ({1}).".format(node.start_mark, key))
