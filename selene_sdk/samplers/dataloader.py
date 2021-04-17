@@ -64,7 +64,7 @@ class _H5Dataset(Dataset):
         # delay initialization to allow multiprocessing
         @wraps(func)
         def dfunc(self, *args, **kwargs):
-            if not self._initialized:
+            if not self.initialized:
                 self.db = h5py.File(self.file_path, 'r')
                 if self.unpackbits:
                     self.s_len = self.db['{0}_length'.format(self._sequence_key)][()]
@@ -75,7 +75,7 @@ class _H5Dataset(Dataset):
                 else:
                     self.sequences = self.db[self._sequence_key]
                     self.targets = self.db[self._targets_key]
-                self._initialized = True
+                self.initialized = True
             return func(self, *args, **kwargs)
 
         return dfunc

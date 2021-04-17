@@ -55,7 +55,7 @@ class RandomPositionsSampler(OnlineSampler):
         # delay initialization to allow  multiprocessing
         @wraps(func)
         def dfunc(self, *args, **kwargs):
-            if not self._initialized:
+            if not self.initialized:
                 if self._holdout_type == "chromosome":
                     self._partition_genome_by_chromosome()
                 else:
@@ -63,7 +63,7 @@ class RandomPositionsSampler(OnlineSampler):
 
                 for mode in self.modes:
                     self._update_randcache(mode=mode)
-                self._initialized = True
+                self.initialized = True
             return func(self, *args, **kwargs)
 
         return dfunc

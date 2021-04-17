@@ -9,6 +9,7 @@ from typing import Dict, Tuple, Type
 import numpy as np
 import tensorflow as tf
 from torch import load, save
+import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
@@ -34,7 +35,7 @@ def _metrics_logger(name, out_filepath) -> logging:
 
 class TrainModel(object):
     def __init__(self,
-                 model: Type[tf.Module],
+                 model: Type[nn.Module],
                  data_sampler: Sampler,
                  loss_criterion,  # extends torch.nn._Loss
                  optimizer_class: Type[tf.keras.optimizers.Optimizer],

@@ -73,7 +73,7 @@ class Genome(Sequence):
     def __init__(self, input_path, blacklist_regions=None, bases_order=None, init_unpicklable=False):
         self.input_path = input_path
         self.blacklist_regions = blacklist_regions
-        self._initialized = False
+        self.initialized = False
 
         if bases_order is not None:
             bases = [str.upper(b) for b in bases_order]
@@ -86,7 +86,7 @@ class Genome(Sequence):
             self.update_bases_order(bases)
 
         if init_unpicklable:
-            self._unpicklable_init()
+            self.unpicklable_init()
 
     @classmethod
     def update_bases_order(cls, bases):
@@ -97,8 +97,8 @@ class Genome(Sequence):
             **{b: ix for (ix, b) in enumerate(lc_bases)}}
         cls.INDEX_TO_BASE = {ix: b for (ix, b) in enumerate(bases)}
 
-    def _unpicklable_init(self):
-        if not self._initialized:
+    def unpicklable_init(self):
+        if not self.initialized:
             self.genome = pyfaidx.Fasta(self.input_path)
             self.chrs = sorted(self.genome.keys())
             self.len_chrs = self._get_len_chrs()
@@ -117,13 +117,13 @@ class Genome(Sequence):
             elif self.blacklist_regions is not None:  # user-specified file
                 self._blacklist_tabix = tabix.open(
                     self.blacklist_regions)
-            self._initialized = True
+            self.initialized = True
 
     def init(self):
         # delay initialization to allow  multiprocessing
         @wraps(self)
         def dfunc(self, *args, **kwargs):
-            self._unpicklable_init()
+            self.unpicklable_init()
             return self(self, *args, **kwargs)
 
         return dfunc

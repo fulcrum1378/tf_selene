@@ -8,6 +8,7 @@ import numpy as np
 import pyfaidx
 import tensorflow as tf
 from torch import load
+import torch.nn as nn
 
 from ._common import _pad_sequence
 from ._common import _truncate_sequence
@@ -36,14 +37,14 @@ VARIANTEFFECT_COLS = ["chrom", "pos", "name", "ref", "alt", "strand", "ref_match
 
 class AnalyzeSequences(object):
     def __init__(self,
-                 model: tf.Module,
+                 model: nn.Module,
                  trained_model_path,  # str or List[str]
                  sequence_length: int,
                  features: List[str],
+                 reference_sequence: Genome,
                  batch_size: int = 64,
                  use_cuda: bool = False,
                  # data_parallel: bool = False,
-                 reference_sequence=Genome,
                  write_mem_limit: int = 1500):
         self.model = model
 
@@ -84,12 +85,12 @@ class AnalyzeSequences(object):
         self.batch_size = batch_size
         self.features = features
         self.reference_sequence = reference_sequence
-        if not self.reference_sequence._initialized:
-            self.reference_sequence._unpicklable_init()
+        if not self.reference_sequence.initialized:
+            self.reference_sequence.unpicklable_init()
         if type(self.reference_sequence) == Genome and \
                 _is_lua_trained_model(model):
             Genome.update_bases_order(['A', 'G', 'C', 'T'])
-        else:  # even if not using Genome, I guess we can update?
+        else:
             Genome.update_bases_order(['A', 'C', 'G', 'T'])
         self._write_mem_limit = write_mem_limit
 
@@ -284,8 +285,7 @@ class AnalyzeSequences(object):
             seq_enc = np.expand_dims(seq_enc, axis=0)  # add batch size of 1
             return predict(self.model, seq_enc, use_cuda=self.use_cuda)
         elif input_path.endswith('.fa') or input_path.endswith('.fasta'):
-            self.get_predictions_for_fasta_file(
-                input_path, output_dir, output_format=output_format)
+            self.get_predictions_for_fasta_file(input_path, output_dir, output_format=output_format)
         else:
             self.get_predictions_for_bed_file(
                 input_path,

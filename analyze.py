@@ -10,19 +10,19 @@ from selene_sdk.sequences import Genome
 
 model_architecture = NonStrandSpecific(DeeperDeepSEA(1000, 919))
 
-features = load_features_list("distinct_features.txt")
+features = load_features_list("analyzing/distinct_features.txt")
 analysis = AnalyzeSequences(
     model_architecture,
-    "example_deeperdeepsea.pth.tar",
+    "analyzing/example_deeperdeepsea.pth.tar",
     sequence_length=1000,
     features=features,
-    use_cuda=False)
-analysis.in_silico_mutagenesis_from_file("sequences.fasta",
+    reference_sequence=Genome("analyzing/sequences.fasta"))
+analysis.in_silico_mutagenesis_from_file("analyzing/sequences.fasta",
                                          save_data=["abs_diffs", "logits", "predictions"],
                                          output_dir=".",
                                          use_sequence_name=False)
 
-ism = ISMResult.from_file("0_predictions.tsv")
+ism = ISMResult.from_file("analyzing/0_predictions.tsv")
 score_matrix = ism.get_score_matrix_for("K562|H3K27ac|None")[:50, ]
 
 reference_encoding = Genome.sequence_to_encoding(ism.reference_sequence)[:50, ] == 1.

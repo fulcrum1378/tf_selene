@@ -1,7 +1,8 @@
 import tensorflow as tf
+import torch.nn as nn
 
 
-class MultiModelWrapper(tf.Module):
+class MultiModelWrapper(nn.Module):
     def __init__(self, sub_models, concat_dim=1):
         super(MultiModelWrapper, self).__init__()
         self.sub_models = sub_models

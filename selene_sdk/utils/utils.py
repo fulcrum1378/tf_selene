@@ -4,11 +4,12 @@ import sys
 
 import numpy as np
 import tensorflow as tf
+import torch.nn as nn
 
 from .multi_model_wrapper import MultiModelWrapper
 
 
-def _is_lua_trained_model(model: tf.Module):
+def _is_lua_trained_model(model: nn.Module):
     if hasattr(model, 'from_lua'): return model.from_lua
     check_model = model
     if hasattr(model, 'model'):
@@ -39,7 +40,7 @@ def get_indices_and_probabilities(interval_lengths, indices):
             interval_lengths, keep_indices)
 
 
-def load_model_from_state_dict(state_dict, model: tf.Module):
+def load_model_from_state_dict(state_dict, model: nn.Module):
     if 'state_dict' in state_dict:
         state_dict = state_dict['state_dict']
 

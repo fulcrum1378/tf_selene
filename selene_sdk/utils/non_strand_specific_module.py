@@ -1,4 +1,5 @@
 import tensorflow as tf
+import torch.nn as nn
 
 from . import _is_lua_trained_model
 
@@ -13,7 +14,7 @@ def _flip(x, dim):
     return x.view(xsize)
 
 
-class NonStrandSpecific(tf.Module):
+class NonStrandSpecific(nn.Module):
     def __init__(self, model, mode="mean"):
         super(NonStrandSpecific, self).__init__()
 

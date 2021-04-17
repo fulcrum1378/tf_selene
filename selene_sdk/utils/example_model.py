@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 
-class DeeperDeepSEA(tf.Module):
+class DeeperDeepSEA(nn.Module):
     def __init__(self, sequence_length, n_targets):
         super(DeeperDeepSEA, self).__init__()
         conv_kernel_size = 8

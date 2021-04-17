@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 import tensorflow as tf
+import torch.nn as nn
 
 from ..utils import _is_lua_trained_model
 
@@ -22,7 +23,7 @@ def get_reverse_complement_encoding(allele_encoding, bases_arr, complementary_ba
     return allele_encoding[:, complement_indices][::-1, :]
 
 
-def predict(model: tf.Module, batch_sequences, use_cuda: bool = False):
+def predict(model: nn.Module, batch_sequences, use_cuda: bool = False):
     inputs = tf.Tensor(batch_sequences)
     if use_cuda:
         inputs = inputs.cuda()
