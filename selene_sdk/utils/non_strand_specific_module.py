@@ -5,13 +5,13 @@ from . import _is_lua_trained_model
 
 
 def _flip(x: tf.Tensor, dim):
-    xsize = x
+    xsize = x.shape
     dim = x.ndim + dim if dim < 0 else dim
     # x = x.contiguous()
-    x = tf.reshape(x, [-1, ].append(*xsize[dim:]))
-    x = x.view(x.size(0), x.size(1), -1)[:, getattr(
-        tf.experimental.numpy.arange(x.size(1) - 1, -1, -1), ('cpu', 'cuda')[x.is_cuda])().long(), :]
-    return x.view(xsize)
+    x = tf.reshape(x, [-1, *xsize[dim:]])
+    x = tf.reshape(x, [x.shape[0], x.shape[1], -1])[:, getattr(
+        tf.experimental.numpy.arange(x.shape[1] - 1, -1, -1), ('cpu', 'cuda')[x.is_cuda])().long(), :]
+    return tf.reshape(x, [xsize])
 
 
 class NonStrandSpecific(nn.Module):
