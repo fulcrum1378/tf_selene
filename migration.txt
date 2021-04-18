@@ -25,7 +25,14 @@
 # torch.save()                                     =>
 # torch.set_num_threads()                          => tf.config.threading.set_intra_op_parallelism_threads()
 # torch.squeeze()                                  => tf.squeeze()
-# torch.Tensor()                                   => tf.Tensor() (created by tf.constant())
+# torch.Tensor()                                   => tf.constant() (-> tf.Tensor())
+        -> .contiguous()                           => PRESUMABLY NOTHING, IGNORE IT!
+        -> .dim()                                  => tf.Tensor().ndim
+        -> .size()                                 =>
+        -> .sum()                                  => tf.size(tf.Tensor) (ALMOST CERTAINLY!!)
+        -> .transpose()                            => tf.transpose(tf.Tensor)
+        -> .unsqueeze_()                           => tf.expand_dims(tf.Tensor) (PRESUMABLY!!)
+        -> .view()                                 => tf.reshape(tf.Tensor) (ALMOST CERTAINLY!!)
 # torch.utils.data.DataLoader()                    =>
 # torch.utils.data.Dataset()                       =>
 # torch.utils.data.sampler.SubsetRandomSampler()   =>

@@ -24,14 +24,14 @@ def get_reverse_complement_encoding(allele_encoding, bases_arr, complementary_ba
 
 
 def predict(model: nn.Module, batch_sequences, use_cuda: bool = False):
-    inputs = tf.Tensor(batch_sequences)
+    inputs = tf.constant(batch_sequences)
     if use_cuda:
         inputs = inputs.cuda()
     inputs = tf.Variable(inputs, trainable=False)
     if _is_lua_trained_model(model):
-        outputs = model.forward(inputs.transpose(1, 2).contiguous().unsqueeze_(2))
+        outputs = model.forward(tf.expand_dims(tf.transpose(inputs)), 2)  # , perm=[1, 2] (tf)
     else:
-        outputs = model.forward(inputs.transpose(1, 2))
+        outputs = model.forward(tf.transpose(inputs))  # , perm=[1, 2] (tf)
     return outputs.data.cpu().numpy()
 
 

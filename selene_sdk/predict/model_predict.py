@@ -464,12 +464,9 @@ class AnalyzeSequences(object):
                 reference_sequence=self.reference_sequence,
                 start_position=start_position,
                 end_position=end_position)
-            cur_sequence_encoding = self.reference_sequence.sequence_to_encoding(
-                cur_sequence)
-            base_encoding = cur_sequence_encoding.reshape(
-                1, *cur_sequence_encoding.shape)
-            base_preds = predict(
-                self.model, base_encoding, use_cuda=self.use_cuda)
+            cur_sequence_encoding = self.reference_sequence.sequence_to_encoding(cur_sequence)
+            base_encoding = cur_sequence_encoding.reshape(1, *cur_sequence_encoding.shape)
+            base_preds = predict(self.model, base_encoding, use_cuda=self.use_cuda)
 
             if use_sequence_name:
                 file_prefix = os.path.join(
