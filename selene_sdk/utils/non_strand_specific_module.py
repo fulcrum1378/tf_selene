@@ -9,9 +9,9 @@ def _flip(x: tf.Tensor, dim):
     dim = x.ndim + dim if dim < 0 else dim
     # x = x.contiguous()
     x = tf.reshape(x, [-1, *xsize[dim:]])
-    x = tf.reshape(x, [x.shape[0], x.shape[1], -1])[:, getattr(
-        tf.experimental.numpy.arange(x.shape[1] - 1, -1, -1), ('cpu', 'cuda')[x.is_cuda])().long(), :]
-    return tf.reshape(x, [xsize])
+    copied = tf.experimental.numpy.arange(x.shape[1] - 1, -1, -1)  # tf.constant(, device=x.device)
+    x = tf.gather(tf.reshape(x, [x.shape[0], x.shape[1], -1]), tf.cast(copied, tf.int64), axis=tf.constant(1))
+    return tf.reshape(x, [*xsize])
 
 
 class NonStrandSpecific(nn.Module):

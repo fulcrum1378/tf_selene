@@ -1,4 +1,4 @@
-# torch.arange()                                   => tf.experimental.numpy.arange()
+# torch.arange()                                   => tf.constant(tf.experimental.numpy.arange())
 # torch.autograd.Variable()                        => tf.Variable()
 # torch.cat()                                      => tf.concat()
 # torch.cuda.manual_seed_all()                     =>
@@ -26,8 +26,12 @@
 # torch.set_num_threads()                          => tf.config.threading.set_intra_op_parallelism_threads()
 # torch.squeeze()                                  => tf.squeeze()
 # torch.Tensor()                                   => tf.constant() (-> tf.Tensor())
+        -> [tf.Tensor]                             => tf.gather(y, ya) (CERTAIN)
+        -> [:, tf.Tensor]                          => tf.gather(y, ya, axis=tf.constant(1)) (CERTAIN)
         -> .contiguous()                           => PRESUMABLY NOTHING, IGNORE IT!
         -> .dim()                                  => tf.Tensor().ndim
+        -> .is_cuda                                => "cuda" in x.device.lower() (irrelevant: tf.test.is_built_with_cuda() also tf.test.is_gpu_available())
+        -> .long()                                 => tf.cast(tf.Tensor, tf.int64)
         -> .size()                                 => tf.Tensor().shape
         -> .size(dim: int)                         => tf.Tensor().shape[dim]
         -> .sum()                                  => tf.size(tf.Tensor) (ALMOST CERTAINLY!!)
