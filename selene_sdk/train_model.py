@@ -37,7 +37,7 @@ class TrainModel(object):
     def __init__(self,
                  model: Type[nn.Module],
                  data_sampler: Sampler,
-                 loss_criterion,  # extends torch.nn._Loss
+                 loss_criterion: tf.keras.losses.Loss,
                  optimizer_class: Type[tf.keras.optimizers.Optimizer],
                  optimizer_kwargs: Dict,
                  batch_size: int,

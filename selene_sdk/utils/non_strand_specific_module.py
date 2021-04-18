@@ -4,7 +4,7 @@ import torch.nn as nn
 from . import _is_lua_trained_model
 
 
-def _flip(x: tf.Tensor, dim):
+def _flip(x: tf.Tensor, dim: int) -> tf.Tensor:
     xsize = x.shape
     dim = x.ndim + dim if dim < 0 else dim
     # x = x.contiguous()
@@ -23,7 +23,7 @@ class NonStrandSpecific(nn.Module):
         self.mode = mode
         self.from_lua = _is_lua_trained_model(model)
 
-    def forward(self, my_input):
+    def forward(self, my_input: tf.Tensor):
         if self.from_lua:
             reverse_input = tf.expand_dims(_flip(_flip(tf.squeeze(my_input, 2), 1), 2), 2)
         else:

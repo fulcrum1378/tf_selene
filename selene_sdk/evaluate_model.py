@@ -21,7 +21,7 @@ logger = logging.getLogger("selene")
 class EvaluateModel(object):
     def __init__(self,
                  model: nn.Module,
-                 criterion,  # extends torch.nn._Loss
+                 criterion: tf.keras.losses.Loss,
                  data_sampler: Sampler,  # must be a subclass of Sampler NOT itself
                  features: List[str],
                  trained_model_path: str,

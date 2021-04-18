@@ -9,7 +9,7 @@ import torch.nn as nn
 from .multi_model_wrapper import MultiModelWrapper
 
 
-def _is_lua_trained_model(model: nn.Module):
+def _is_lua_trained_model(model: tf.Module):
     if hasattr(model, 'from_lua'): return model.from_lua
     check_model = model
     if hasattr(model, 'model'):
