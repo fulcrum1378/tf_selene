@@ -8,7 +8,6 @@ import numpy as np
 import pyfaidx
 import tensorflow as tf
 from torch import load
-import torch.nn as nn
 
 from ._common import _pad_sequence
 from ._common import _truncate_sequence
@@ -37,7 +36,7 @@ VARIANTEFFECT_COLS = ["chrom", "pos", "name", "ref", "alt", "strand", "ref_match
 
 class AnalyzeSequences(object):
     def __init__(self,
-                 model: nn.Module,
+                 model: tf.Module,
                  trained_model_path,  # str or List[str]
                  sequence_length: int,
                  features: List[str],

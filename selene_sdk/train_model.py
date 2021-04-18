@@ -9,7 +9,6 @@ from typing import Dict, Tuple, Type
 import numpy as np
 import tensorflow as tf
 from torch import load, save
-import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
@@ -35,7 +34,7 @@ def _metrics_logger(name, out_filepath) -> logging:
 
 class TrainModel(object):
     def __init__(self,
-                 model: Type[nn.Module],
+                 model: Type[tf.Module],
                  data_sampler: Sampler,
                  loss_criterion: tf.keras.losses.Loss,
                  optimizer_class: Type[tf.keras.optimizers.Optimizer],
@@ -116,11 +115,7 @@ class TrainModel(object):
             checkpoint_resume,
             map_location=lambda storage, location: storage)
         if "state_dict" not in checkpoint:
-            raise ValueError(
-                ("'state_dict' not found in file {0} "
-                 "loaded with method `torch.load`. Selene does not support "
-                 "continued training of models that were not originally "
-                 "trained using Selene.").format(checkpoint_resume))
+            raise ValueError("'state_dict' not found in file {0} ".format(checkpoint_resume))
 
         self.model = load_model_from_state_dict(checkpoint["state_dict"], self.model)
 

@@ -1,14 +1,14 @@
 # torch.arange()                                   => tf.constant(tf.experimental.numpy.arange())
 # torch.autograd.Variable()                        => tf.Variable()
 # torch.cat()                                      => tf.concat()
-# torch.cuda.manual_seed_all()                     =>
+# torch.cuda.manual_seed_all()                     => NOT FOUND; USE tf.random.set_seed() INSTEAD!!
 # torch.from_numpy()                               => tf.convert_to_tensor()
 # torch.load()                                     =>
-# torch.manual_seed()                              =>
+# torch.manual_seed()                              => tf.random.set_seed()
 # torch.max()                                      => tf.math.reduce_max()
 # torch.nn._Loss()                                 => tf.keras.losses.Loss()
 # torch.nn.BatchNorm1d()                           => tf.keras.layers.BatchNormalization()
-        -> num_features=                           => axis= (PRESUMABLY)
+        -> num_features=                           => NOT FOUND (NOT axis)
 # torch.nn.BCELoss()                               => tf.keras.losses.BinaryCrossentropy()
 # torch.nn.Conv1d()                                => tf.keras.layers.Conv1D() (MISSING ARGUMENT FOR INPUT CHANNELS)
 # torch.nn.DataParallel()                          => REMOVED AND REPLACED BY tf.Module
@@ -17,6 +17,8 @@
 # torch.nn.Linear()                                => tf.keras.layers.ELU (MAYBE) (FAR: tfl.layers.Linear())
 # torch.nn.MaxPool1d()                             => tf.keras.layers.MaxPool1D()
 # torch.nn.Module()                                => tf.Module()
+        -> .modules()                              => .submodules (PROBABLY)
+        -> .state_dict()                           =>
 # torch.nn.ReLU()                                  => tf.keras.layers.ReLU()
 # torch.nn.Sequential()                            => tf.keras.Sequential()
 # torch.nn.Sigmoid()                               => NOT FOUND!! (CHECK tf.keras.activations.sigmoid)

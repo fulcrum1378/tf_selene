@@ -6,7 +6,6 @@ import warnings
 import numpy as np
 import tensorflow as tf
 from torch import load
-import torch.nn as nn
 
 from .samplers import Sampler
 from .sequences import Genome
@@ -20,7 +19,7 @@ logger = logging.getLogger("selene")
 
 class EvaluateModel(object):
     def __init__(self,
-                 model: nn.Module,
+                 model: tf.Module,
                  criterion: tf.keras.losses.Loss,
                  data_sampler: Sampler,  # must be a subclass of Sampler NOT itself
                  features: List[str],

@@ -1,10 +1,10 @@
 from collections import OrderedDict
 import logging
 import sys
+from typing import Dict
 
 import numpy as np
 import tensorflow as tf
-import torch.nn as nn
 
 from .multi_model_wrapper import MultiModelWrapper
 
@@ -18,7 +18,7 @@ def _is_lua_trained_model(model: tf.Module):
         check_model = model.sub_models[0]
     setattr(model, "from_lua", False)
     setattr(check_model, "from_lua", False)
-    for m in check_model.modules():
+    for m in check_model.submodules:
         if "Conv2d" in m.__class__.__name__:
             setattr(model, "from_lua", True)
             setattr(check_model, "from_lua", True)
@@ -36,11 +36,10 @@ def get_indices_and_probabilities(interval_lengths, indices):
     if len(keep_indices) == len(indices):
         return indices, weights.tolist()
     else:
-        return get_indices_and_probabilities(
-            interval_lengths, keep_indices)
+        return get_indices_and_probabilities(interval_lengths, keep_indices)
 
 
-def load_model_from_state_dict(state_dict, model: nn.Module):
+def load_model_from_state_dict(state_dict: Dict, model: tf.Module):
     if 'state_dict' in state_dict:
         state_dict = state_dict['state_dict']
 
@@ -85,9 +84,7 @@ def load_features_list(input_path):
 
 def initialize_logger(output_path, verbosity=2):
     logger = logging.getLogger("selene")
-    # check if logger has already been initialized
-    if len(logger.handlers):
-        return
+    if len(logger.handlers): return
 
     if verbosity == 0:
         logger.setLevel(logging.WARN)

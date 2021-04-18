@@ -3,7 +3,7 @@ import tensorflow as tf
 
 
 class DeeperDeepSEA(tf.Module):
-    def __init__(self, sequence_length, n_targets):
+    def __init__(self, sequence_length: int, n_targets: int):
         super(DeeperDeepSEA, self).__init__()
         conv_kernel_size = 8
         pool_kernel_size = 4
@@ -14,21 +14,21 @@ class DeeperDeepSEA(tf.Module):
         self.conv_net.add(tf.keras.layers.Conv1D(320, conv_kernel_size))  # input: 320
         self.conv_net.add(tf.keras.layers.ReLU())
         self.conv_net.add(tf.keras.layers.MaxPool1D(strides=pool_kernel_size))  # ALL kernel_size=pool_kernel_size
-        self.conv_net.add(tf.keras.layers.BatchNormalization(axis=320))
+        self.conv_net.add(tf.keras.layers.BatchNormalization())  # num_features: 320
 
         self.conv_net.add(tf.keras.layers.Conv1D(480, conv_kernel_size))  # input: 320
         self.conv_net.add(tf.keras.layers.ReLU())
         self.conv_net.add(tf.keras.layers.Conv1D(480, conv_kernel_size))  # input: 480
         self.conv_net.add(tf.keras.layers.ReLU())
         self.conv_net.add(tf.keras.layers.MaxPool1D(strides=pool_kernel_size))
-        self.conv_net.add(tf.keras.layers.BatchNormalization(axis=480))
+        self.conv_net.add(tf.keras.layers.BatchNormalization())  # num_features: 480
         self.conv_net.add(tf.keras.layers.Dropout(0.2))
 
         self.conv_net.add(tf.keras.layers.Conv1D(960, conv_kernel_size))  # input: 480
         self.conv_net.add(tf.keras.layers.ReLU())
         self.conv_net.add(tf.keras.layers.Conv1D(960, conv_kernel_size))  # input: 960
         self.conv_net.add(tf.keras.layers.ReLU())
-        self.conv_net.add(tf.keras.layers.BatchNormalization(axis=960))
+        self.conv_net.add(tf.keras.layers.BatchNormalization())  # num_features: 960
         self.conv_net.add(tf.keras.layers.Dropout(0.2))
 
         reduce_by = 2 * (conv_kernel_size - 1)
@@ -49,7 +49,7 @@ class DeeperDeepSEA(tf.Module):
 
     def forward(self, x: tf.Tensor):
         out = self.conv_net(x)
-        reshape_out = out.view(out.size(0), 960 * self._n_channels)
+        reshape_out = tf.reshape(out, [out.shape[0], 960 * self._n_channels])
         predict = self.classifier(reshape_out)
         return predict
 

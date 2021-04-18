@@ -19,7 +19,7 @@ analysis = AnalyzeSequences(
     reference_sequence=Genome("analyzing/sequences.fasta"))
 analysis.in_silico_mutagenesis_from_file("analyzing/sequences.fasta",
                                          save_data=["abs_diffs", "logits", "predictions"],
-                                         output_dir=".",
+                                         output_dir="./analyzing",
                                          use_sequence_name=False)
 
 ism = ISMResult.from_file("analyzing/0_predictions.tsv")

@@ -4,7 +4,7 @@ import sys
 from time import strftime
 import types
 
-import torch
+import tensorflow as tf
 
 from . import _is_lua_trained_model
 from . import instantiate
@@ -20,8 +20,7 @@ def class_instantiate(classobj):
 
 def module_from_file(path):
     parent_path, module_file = os.path.split(path)
-    loader = importlib.machinery.SourceFileLoader(
-        module_file[:-3], path)
+    loader = importlib.machinery.SourceFileLoader(module_file[:-3], path)
     module = types.ModuleType(loader.name)
     loader.exec_module(module)
     return module
@@ -46,8 +45,7 @@ def initialize_model(model_configs, train=True, lr=None):
     model = model_class(**model_configs["class_args"])
     if "non_strand_specific" in model_configs:
         from selene_sdk.utils import NonStrandSpecific
-        model = NonStrandSpecific(
-            model, mode=model_configs["non_strand_specific"])
+        model = NonStrandSpecific(model, mode=model_configs["non_strand_specific"])
 
     _is_lua_trained_model(model)
     criterion = module.criterion()
@@ -174,13 +172,10 @@ def parse_configs_and_run(configs, create_subdirectory=True, lr=None):
             current_run_output_dir = os.path.join(
                 current_run_output_dir, strftime("%Y-%m-%d-%H-%M-%S"))
             os.makedirs(current_run_output_dir)
-        print("Outputs and logs saved to {0}".format(
-            current_run_output_dir))
+        print("Outputs and logs saved to {0}".format(current_run_output_dir))
 
     if "random_seed" in configs:
-        seed = configs["random_seed"]
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
+        tf.random.set_seed(configs["random_seed"])
     else:
         print("Warning: no random seed specified in config file. "
               "Using a random seed ensures results are reproducible.")

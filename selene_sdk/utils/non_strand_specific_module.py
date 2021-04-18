@@ -1,5 +1,4 @@
 import tensorflow as tf
-import torch.nn as nn
 
 from . import _is_lua_trained_model
 
@@ -14,8 +13,9 @@ def _flip(x: tf.Tensor, dim: int) -> tf.Tensor:
     return tf.reshape(x, [*xsize])
 
 
-class NonStrandSpecific(nn.Module):
-    def __init__(self, model, mode="mean"):
+class NonStrandSpecific(tf.Module):
+    def __init__(self, model: tf.Module, mode="mean"):
+        # model: DeeperDeepSEA not just tf.Module (CANNOT IMPORT CIRCULARLY)
         super(NonStrandSpecific, self).__init__()
         self.model = model
         if mode != "mean" and mode != "max":
