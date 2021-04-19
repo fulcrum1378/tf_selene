@@ -6,6 +6,8 @@ from selene_sdk.utils import NonStrandSpecific
 
 model_architecture = NonStrandSpecific(DeeperDeepSEA(1000, 919))
 
+# OSError: SavedModel file does not exist at: analyzing/example_deeperdeepsea.pth.tar/{saved_model.pbtxt|saved_model.pb}
+
 features = load_features_list("analyzing/distinct_features.txt")
 analysis = AnalyzeSequences(
     model_architecture,

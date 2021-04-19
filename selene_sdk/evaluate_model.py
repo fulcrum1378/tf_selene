@@ -5,7 +5,6 @@ import warnings
 
 import numpy as np
 import tensorflow as tf
-from torch import load
 
 from .samplers import Sampler
 from .sequences import Genome
@@ -32,8 +31,8 @@ class EvaluateModel(object):
                  # data_parallel: bool = False,
                  use_features_ord: List[str] = None):
         self.criterion = criterion
-        trained_model = load(
-            trained_model_path, map_location=lambda storage, location: storage)
+        trained_model = tf.saved_model.load(trained_model_path)
+        # map_location=lambda storage, location: storage
         if "state_dict" in trained_model:
             self.model = load_model_from_state_dict(trained_model["state_dict"], model)
         else:
@@ -59,9 +58,7 @@ class EvaluateModel(object):
                                    "`features` and will be skipped.").format(f))
             self._write_features_ordered_to_file()
 
-        initialize_logger(
-            os.path.join(self.output_dir, "{0}.log".format(__name__)),
-            verbosity=2)
+        initialize_logger(os.path.join(self.output_dir, "{0}.log".format(__name__)))
 
         self.use_cuda = use_cuda
         if self.use_cuda: self.model.cuda()
@@ -127,8 +124,7 @@ class EvaluateModel(object):
         for name, score in average_scores.items():
             logger.info("test {0}: {1}".format(name, score))
 
-        test_performance = os.path.join(
-            self.output_dir, "test_performance.txt")
+        test_performance = os.path.join(self.output_dir, "test_performance.txt")
         feature_scores_dict = self._metrics.write_feature_scores_to_file(test_performance)
 
         return feature_scores_dict

@@ -8,7 +8,6 @@ from typing import Dict, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
-from torch import load, save
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
@@ -111,7 +110,7 @@ class TrainModel(object):
             self._train_loss = self._min_loss = None
 
     def _load_checkpoint(self, checkpoint_resume: str) -> None:
-        checkpoint = load(
+        checkpoint = tf.saved_model.load(
             checkpoint_resume,
             map_location=lambda storage, location: storage)
         if "state_dict" not in checkpoint:
@@ -216,8 +215,7 @@ class TrainModel(object):
                 strftime("%m%d%H%M%S"))
             self._save_checkpoint(
                 checkpoint_dict, False, filename=checkpoint_filename)
-            logger.debug("Saving checkpoint `{0}.pth.tar`".format(
-                checkpoint_filename))
+            logger.debug("Saving checkpoint `{0}.pb.tar`".format(checkpoint_filename))
         else:
             self._save_checkpoint(
                 checkpoint_dict, False)
@@ -323,7 +321,7 @@ class TrainModel(object):
                 "state_dict": self.model.state_dict(),
                 "min_loss": self._min_loss,
                 "optimizer": self.optimizer.state_dict()}, True)
-            logger.debug("Updating `best_model.pth.tar`")
+            logger.debug("Updating `best_model.pb.tar`")
         logger.info("validation loss: {0}".format(validation_loss))
 
     def evaluate(self) -> Tuple:
@@ -345,8 +343,7 @@ class TrainModel(object):
     def _save_checkpoint(self, state, is_best, filename="checkpoint") -> None:
         logger.debug("[TRAIN] {0}: Saving model state to file.".format(state["step"]))
         cp_filepath = os.path.join(self.output_dir, filename)
-        save(state, "{0}.pth.tar".format(cp_filepath))
+        tf.saved_model.save(state, "{0}.pb.tar".format(cp_filepath))
         if is_best:
             best_filepath = os.path.join(self.output_dir, "best_model")
-            shutil.copyfile("{0}.pth.tar".format(cp_filepath),
-                            "{0}.pth.tar".format(best_filepath))
+            shutil.copyfile("{0}.pb.tar".format(cp_filepath), "{0}.pb.tar".format(best_filepath))

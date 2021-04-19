@@ -3,7 +3,7 @@
 # torch.cat()                                      => tf.concat()
 # torch.cuda.manual_seed_all()                     => NOT FOUND; USE tf.random.set_seed() INSTEAD!!
 # torch.from_numpy()                               => tf.convert_to_tensor()
-# torch.load()                                     =>
+# torch.load()                                     => tf.saved_model.load()
 # torch.manual_seed()                              => tf.random.set_seed()
 # torch.max()                                      => tf.math.reduce_max()
 # torch.nn._Loss()                                 => tf.keras.losses.Loss()
@@ -26,7 +26,7 @@
 # torch.optim.Optimizer()                          => tf.keras.optimizers.Optimizer() (MAYBE)
 # torch.optim.lr_scheduler.ReduceLROnPlateau()     =>
 # torch.optim.SGD()                                => tf.keras.optimizers.SGD()
-# torch.save()                                     =>
+# torch.save()                                     => tf.saved_model.save()
 # torch.set_num_threads()                          => tf.config.threading.set_intra_op_parallelism_threads()
 # torch.squeeze()                                  => tf.squeeze()
 # torch.Tensor()                                   => tf.constant() (-> tf.Tensor())
@@ -43,5 +43,5 @@
         -> .unsqueeze_()                           => tf.expand_dims(tf.Tensor) (PRESUMABLY)
         -> .view(d...)                             => tf.reshape(tf.Tensor, [d...]) (ALMOST CERTAINLY)
 # torch.utils.data.DataLoader()                    =>
-# torch.utils.data.Dataset()                       =>
+# torch.utils.data.Dataset()                       => tf.data.Dataset()
 # torch.utils.data.sampler.SubsetRandomSampler()   =>

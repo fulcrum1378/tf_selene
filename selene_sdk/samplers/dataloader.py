@@ -4,10 +4,11 @@ from functools import wraps
 import h5py
 import numpy as np
 import tensorflow as tf
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data.sampler import SubsetRandomSampler
+from torch.utils.data import DataLoader
 
 
-class _SamplerDataset(Dataset):
+class _SamplerDataset(tf.data.Dataset):
     def __init__(self, sampler):
         super(_SamplerDataset, self).__init__()
         self.sampler = sampler
@@ -44,7 +45,7 @@ class SamplerDataLoader(DataLoader):
         self.seed = seed
 
 
-class _H5Dataset(Dataset):
+class _H5Dataset(tf.data.Dataset):
     def __init__(self,
                  file_path,
                  in_memory=False,
@@ -126,7 +127,6 @@ class H5DataLoader(DataLoader):
             "pin_memory": True
         }
         if use_subset is not None:
-            from torch.utils.data.sampler import SubsetRandomSampler
             if isinstance(use_subset, int):
                 use_subset = list(range(use_subset))
             elif isinstance(use_subset, tuple) and len(use_subset) == 2:

@@ -7,7 +7,6 @@ from typing import List, Tuple
 import numpy as np
 import pyfaidx
 import tensorflow as tf
-from torch import load
 
 from ._common import _pad_sequence
 from ._common import _truncate_sequence
@@ -49,18 +48,14 @@ class AnalyzeSequences(object):
         self.model = model
 
         if isinstance(trained_model_path, str):
-            trained_model = load(
-                trained_model_path,
-                map_location=lambda storage, location: storage)
-
+            trained_model = tf.saved_model.load(trained_model_path)
+            # map_location=lambda storage, location: storage
             load_model_from_state_dict(trained_model, self.model)
         elif hasattr(trained_model_path, '__len__'):
             state_dicts = []
             for mp in trained_model_path:
-                state_dict = load(
-                    mp, map_location=lambda storage, location: storage)
+                state_dict = tf.saved_model.load(mp)  # map_location=lambda storage, location: storage
                 state_dicts.append(state_dict)
-
             for (sd, sub_model) in zip(state_dicts, self.model.sub_models):
                 load_model_from_state_dict(sd, sub_model)
         else:
@@ -364,8 +359,7 @@ class AnalyzeSequences(object):
             pad_l = int(np.floor(diff))
             pad_r = math.ceil(diff)
             sequence = ((self.reference_sequence.UNK_BASE * pad_l) +
-                        sequence +
-                        (self.reference_sequence.UNK_BASE * pad_r))
+                        sequence + (self.reference_sequence.UNK_BASE * pad_r))
         elif n > self.sequence_length:  # Extract center substring of proper length.
             start = int((n - self.sequence_length) // 2)
             end = int(start + self.sequence_length)
@@ -373,8 +367,7 @@ class AnalyzeSequences(object):
 
         sequence = str.upper(sequence)
         mutated_sequences = in_silico_mutagenesis_sequences(
-            sequence, mutate_n_bases=1,
-            reference_sequence=self.reference_sequence,
+            sequence, reference_sequence=self.reference_sequence,
             start_position=start_position,
             end_position=end_position)
         reporters = self._initialize_reporters(
@@ -607,11 +600,7 @@ class AnalyzeSequences(object):
 
     def _pad_or_truncate_sequence(self, sequence: str) -> str:
         if len(sequence) < self.sequence_length:
-            sequence = _pad_sequence(
-                sequence,
-                self.sequence_length,
-                self.reference_sequence.UNK_BASE,
-            )
+            sequence = _pad_sequence(sequence, self.sequence_length, self.reference_sequence.UNK_BASE)
         elif len(sequence) > self.sequence_length:
             sequence = _truncate_sequence(sequence, self.sequence_length)
         return sequence
