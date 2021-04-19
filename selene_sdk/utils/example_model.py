@@ -36,8 +36,7 @@ class DeeperDeepSEA(tf.Module):
         self._n_channels = int(
             np.floor(
                 (np.floor(
-                    (sequence_length - reduce_by) / pool_kernel_size)
-                 - reduce_by) / pool_kernel_size)
+                    (sequence_length - reduce_by) / pool_kernel_size) - reduce_by) / pool_kernel_size)
             - reduce_by)
 
         self.classifier = tf.keras.Sequential()
@@ -49,9 +48,7 @@ class DeeperDeepSEA(tf.Module):
 
     def forward(self, x: tf.Tensor):
         out = self.conv_net(x)
-        reshape_out = tf.reshape(out, [out.shape[0], 960 * self._n_channels])
-        predict = self.classifier(reshape_out)
-        return predict
+        return self.classifier(tf.reshape(out, [out.shape[0], 960 * self._n_channels]))
 
 
 def criterion():

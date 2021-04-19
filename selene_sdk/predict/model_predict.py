@@ -29,6 +29,7 @@ from .predict_handlers import WriteRefAltHandler
 from ..sequences import Genome
 from ..utils import _is_lua_trained_model
 from ..utils import load_model_from_state_dict
+from ..utils import NonStrandSpecific
 
 ISM_COLS = ["pos", "ref", "alt"]
 VARIANTEFFECT_COLS = ["chrom", "pos", "name", "ref", "alt", "strand", "ref_match", "contains_unk"]
@@ -36,7 +37,7 @@ VARIANTEFFECT_COLS = ["chrom", "pos", "name", "ref", "alt", "strand", "ref_match
 
 class AnalyzeSequences(object):
     def __init__(self,
-                 model: tf.Module,
+                 model: NonStrandSpecific,
                  trained_model_path,  # str or List[str]
                  sequence_length: int,
                  features: List[str],
@@ -52,8 +53,7 @@ class AnalyzeSequences(object):
                 trained_model_path,
                 map_location=lambda storage, location: storage)
 
-            load_model_from_state_dict(
-                trained_model, self.model)
+            load_model_from_state_dict(trained_model, self.model)
         elif hasattr(trained_model_path, '__len__'):
             state_dicts = []
             for mp in trained_model_path:
@@ -86,8 +86,7 @@ class AnalyzeSequences(object):
         self.reference_sequence = reference_sequence
         if not self.reference_sequence.initialized:
             self.reference_sequence.unpicklable_init()
-        if type(self.reference_sequence) == Genome and \
-                _is_lua_trained_model(model):
+        if type(self.reference_sequence) == Genome and _is_lua_trained_model(model):
             Genome.update_bases_order(['A', 'G', 'C', 'T'])
         else:
             Genome.update_bases_order(['A', 'C', 'G', 'T'])
@@ -118,20 +117,15 @@ class AnalyzeSequences(object):
             if i == 0:
                 write_labels = True
             if "diffs" == s:
-                reporters.append(DiffScoreHandler(
-                    *constructor_args, write_labels=write_labels))
+                reporters.append(DiffScoreHandler(*constructor_args, write_labels=write_labels))
             elif "abs_diffs" == s:
-                reporters.append(AbsDiffScoreHandler(
-                    *constructor_args, write_labels=write_labels))
+                reporters.append(AbsDiffScoreHandler(*constructor_args, write_labels=write_labels))
             elif "logits" == s:
-                reporters.append(LogitScoreHandler(
-                    *constructor_args, write_labels=write_labels))
+                reporters.append(LogitScoreHandler(*constructor_args, write_labels=write_labels))
             elif "predictions" == s and mode != "varianteffect":
-                reporters.append(WritePredictionsHandler(
-                    *constructor_args, write_labels=write_labels))
+                reporters.append(WritePredictionsHandler(*constructor_args, write_labels=write_labels))
             elif "predictions" == s and mode == "varianteffect":
-                reporters.append(WriteRefAltHandler(
-                    *constructor_args, write_labels=write_labels))
+                reporters.append(WriteRefAltHandler(*constructor_args, write_labels=write_labels))
         return reporters
 
     def _get_sequences_from_bed_file(self,
@@ -390,13 +384,10 @@ class AnalyzeSequences(object):
             ISM_COLS,
             output_size=len(mutated_sequences))
 
-        current_sequence_encoding = \
-            self.reference_sequence.sequence_to_encoding(sequence)
+        current_sequence_encoding = self.reference_sequence.sequence_to_encoding(sequence)
 
-        current_sequence_encoding = current_sequence_encoding.reshape(
-            (1, *current_sequence_encoding.shape))
-        base_preds = predict(
-            self.model, current_sequence_encoding, use_cuda=self.use_cuda)
+        current_sequence_encoding = current_sequence_encoding.reshape((1, *current_sequence_encoding.shape))
+        base_preds = predict(self.model, current_sequence_encoding, use_cuda=self.use_cuda)
 
         if "predictions" in save_data and output_format == 'hdf5':
             ref_reporter = self._initialize_reporters(
@@ -407,8 +398,7 @@ class AnalyzeSequences(object):
                 base_preds, [["input_sequence"]])
             ref_reporter.write_to_file()
         elif "predictions" in save_data and output_format == 'tsv':
-            reporters[-1].handle_batch_predictions(
-                base_preds, [["input_sequence", "NA", "NA"]])
+            reporters[-1].handle_batch_predictions(base_preds, [["input_sequence", "NA", "NA"]])
 
         self.in_silico_mutagenesis_predict(
             sequence,
@@ -468,11 +458,9 @@ class AnalyzeSequences(object):
             base_preds = predict(self.model, base_encoding, use_cuda=self.use_cuda)
 
             if use_sequence_name:
-                file_prefix = os.path.join(
-                    output_dir, fasta_record.name.replace(' ', '_'))
+                file_prefix = os.path.join(output_dir, fasta_record.name.replace(' ', '_'))
             else:
-                file_prefix = os.path.join(
-                    output_dir, str(i))
+                file_prefix = os.path.join(output_dir, str(i))
             # Write base to file, and make mut preds.
             reporters = self._initialize_reporters(
                 save_data,
@@ -486,12 +474,10 @@ class AnalyzeSequences(object):
                     ["predictions"],
                     "{0}_ref".format(file_prefix),
                     output_format, ["name"], output_size=1)[0]
-                ref_reporter.handle_batch_predictions(
-                    base_preds, [["input_sequence"]])
+                ref_reporter.handle_batch_predictions(base_preds, [["input_sequence"]])
                 ref_reporter.write_to_file()
             elif "predictions" in save_data and output_format == 'tsv':
-                reporters[-1].handle_batch_predictions(
-                    base_preds, [["input_sequence", "NA", "NA"]])
+                reporters[-1].handle_batch_predictions(base_preds, [["input_sequence", "NA", "NA"]])
 
             self.in_silico_mutagenesis_predict(
                 cur_sequence, base_preds, mutated_sequences,
@@ -538,8 +524,7 @@ class AnalyzeSequences(object):
             start = center - self._start_radius
             end = center + self._end_radius
             ref_sequence_encoding, contains_unk = \
-                self.reference_sequence.get_encoding_from_coords_check_unk(
-                    chrom, start, end)
+                self.reference_sequence.get_encoding_from_coords_check_unk(chrom, start, end)
 
             ref_encoding = self.reference_sequence.sequence_to_encoding(ref)
             alt_sequence_encoding = _process_alt(
