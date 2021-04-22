@@ -2,7 +2,7 @@
 ops: [train, evaluate]
 model: {
     # TODO: update this line with the absolute path to the file.
-    path: /home/fulcrum/Documents/tf_selene/training/deeperdeepsea.py,
+    path: /home/fulcrum/Documents/tf_selene/selene_sdk/utils/example_model.py,
     class: DeeperDeepSEA,
     class_args: {
         sequence_length: 1000,

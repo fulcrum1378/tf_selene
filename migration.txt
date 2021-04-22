@@ -17,7 +17,8 @@
 # torch.nn.Linear()                                => tf.keras.layers.ELU (MAYBE) (FAR: tfl.layers.Linear())
 # torch.nn.MaxPool1d()                             => tf.keras.layers.MaxPool1D()
 # torch.nn.Module()                                => tf.Module()
-        -> .modules()                              => .submodules (PROBABLY)
+        -> .modules()                              => .submodules
+        -> .parameters()                           => .variables
         -> .state_dict()                           =>
 # torch.nn.ReLU()                                  => tf.keras.layers.ReLU()
 # torch.nn.Sequential()                            => tf.keras.Sequential()

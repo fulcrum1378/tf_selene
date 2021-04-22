@@ -1,6 +1,12 @@
-import tensorflow as tf
-import torch as ch
+# import tensorflow as tf
+# import torch as ch
+from typing import Type
 
-x = ch.nn.Conv1d(4, 320, kernel_size=8)
-print(x.bias)
-# print(tf.keras.layers.Conv1D(320, 8))
+
+class Kir:
+    def __init__(self):
+        self.verb = "FUCK"
+
+
+t: Type[Kir] = Kir
+print(t().verb)
