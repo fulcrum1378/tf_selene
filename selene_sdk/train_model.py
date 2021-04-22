@@ -56,8 +56,7 @@ class TrainModel(object):
         self.model = model
         self.sampler = data_sampler
         self.criterion = loss_criterion
-        self.optimizer = tf.keras.optimizers.get(
-            optimizer_class.__class__.__name__)(self.model.parameters(), **optimizer_kwargs)
+        self.optimizer = optimizer_class(self.model.parameters(), **optimizer_kwargs)
 
         self.batch_size = batch_size
         self.max_steps = max_steps

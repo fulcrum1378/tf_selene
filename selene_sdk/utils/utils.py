@@ -39,10 +39,7 @@ def get_indices_and_probabilities(interval_lengths, indices):
         return get_indices_and_probabilities(interval_lengths, keep_indices)
 
 
-import torch.nn as nn
-
-
-def load_model_from_state_dict(state_dict: Dict, model: nn.Module):
+def load_model_from_state_dict(state_dict: Dict, model: tf.Module):
     if 'state_dict' in state_dict:
         state_dict = state_dict['state_dict']
 

@@ -80,8 +80,7 @@ def execute(operations, configs, output_dir):
                 train_model_info.bind(output_dir=output_dir)
 
             train_model = instantiate(train_model_info)
-            if "load_test_set" in configs and configs["load_test_set"] and \
-                    "evaluate" in operations:
+            if "load_test_set" in configs and configs["load_test_set"] and "evaluate" in operations:
                 train_model.create_test_set()
             train_model.train_and_validate()
 

@@ -1,5 +1,4 @@
 import tensorflow as tf
-# import torch.nn as nn
 
 from . import _is_lua_trained_model
 

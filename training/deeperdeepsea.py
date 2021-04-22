@@ -1,38 +1,35 @@
 import numpy as np
-from torch.optim import SGD
-from torch.nn import BatchNorm1d, BCELoss, Conv1d, Dropout, Linear, MaxPool1d, Module, ReLU, Sequential, Sigmoid
+import tensorflow as tf
 
 
-class DeeperDeepSEA(Module):
+class DeeperDeepSEA(tf.Module):
     def __init__(self, sequence_length, n_targets):
         super(DeeperDeepSEA, self).__init__()
         conv_kernel_size = 8
         pool_kernel_size = 4
 
-        self.conv_net = Sequential(
-            Conv1d(4, 320, kernel_size=conv_kernel_size),
-            ReLU(inplace=True),
-            Conv1d(320, 320, kernel_size=conv_kernel_size),
-            ReLU(inplace=True),
-            MaxPool1d(
-                kernel_size=pool_kernel_size, stride=pool_kernel_size),
-            BatchNorm1d(320),
+        self.conv_net = tf.keras.Sequential()
+        self.conv_net.add(tf.keras.layers.Conv1D(320, kernel_size=conv_kernel_size))  # 4
+        self.conv_net.add(tf.keras.layers.ReLU())  # ALL: inplace=True
+        self.conv_net.add(tf.keras.layers.Conv1D(320, kernel_size=conv_kernel_size))  # 320
+        self.conv_net.add(tf.keras.layers.ReLU())
+        self.conv_net.add(tf.keras.layers.MaxPool1D(strides=pool_kernel_size))  # kernel_size=pool_kernel_size
+        self.conv_net.add(tf.keras.layers.BatchNormalization())  # 320
 
-            Conv1d(320, 480, kernel_size=conv_kernel_size),
-            ReLU(inplace=True),
-            Conv1d(480, 480, kernel_size=conv_kernel_size),
-            ReLU(inplace=True),
-            MaxPool1d(
-                kernel_size=pool_kernel_size, stride=pool_kernel_size),
-            BatchNorm1d(480),
-            Dropout(p=0.2),
+        self.conv_net.add(tf.keras.layers.Conv1D(480, kernel_size=conv_kernel_size))  # 320
+        self.conv_net.add(tf.keras.layers.ReLU())
+        self.conv_net.add(tf.keras.layers.Conv1D(480, kernel_size=conv_kernel_size))  # 480
+        self.conv_net.add(tf.keras.layers.ReLU())
+        self.conv_net.add(tf.keras.layers.MaxPool1D(strides=pool_kernel_size))  # kernel_size=pool_kernel_size
+        self.conv_net.add(tf.keras.layers.BatchNormalization())  # 480
+        self.conv_net.add(tf.keras.layers.Dropout(0.2))
 
-            Conv1d(480, 960, kernel_size=conv_kernel_size),
-            ReLU(inplace=True),
-            Conv1d(960, 960, kernel_size=conv_kernel_size),
-            ReLU(inplace=True),
-            BatchNorm1d(960),
-            Dropout(p=0.2))
+        self.conv_net.add(tf.keras.layers.Conv1D(960, kernel_size=conv_kernel_size))  # 480
+        self.conv_net.add(tf.keras.layers.ReLU())
+        self.conv_net.add(tf.keras.layers.Conv1D(960, kernel_size=conv_kernel_size))  # 960
+        self.conv_net.add(tf.keras.layers.ReLU())
+        self.conv_net.add(tf.keras.layers.BatchNormalization())  # 960
+        self.conv_net.add(tf.keras.layers.Dropout(0.2))
 
         reduce_by = 2 * (conv_kernel_size - 1)
         pool_kernel_size = float(pool_kernel_size)
@@ -42,12 +39,12 @@ class DeeperDeepSEA(Module):
                     (sequence_length - reduce_by) / pool_kernel_size)
                  - reduce_by) / pool_kernel_size)
             - reduce_by)
-        self.classifier = Sequential(
-            Linear(960 * self._n_channels, n_targets),
-            ReLU(inplace=True),
-            BatchNorm1d(n_targets),
-            Linear(n_targets, n_targets),
-            Sigmoid())
+        self.classifier = tf.keras.Sequential()
+        self.classifier.add(tf.keras.layers.ELU())  # 960 * self._n_channels, n_targets
+        self.classifier.add(tf.keras.layers.ReLU())  # inplace=True
+        self.classifier.add(tf.keras.layers.BatchNormalization())  # n_targets
+        self.classifier.add(tf.keras.layers.ELU())  # n_targets, n_targets
+        # self.classifier.add(tf.keras.activations.sigmoid())
 
     def forward(self, x):
         out = self.conv_net(x)
@@ -57,8 +54,8 @@ class DeeperDeepSEA(Module):
 
 
 def criterion():
-    return BCELoss()
+    return tf.keras.losses.BinaryCrossentropy()
 
 
 def get_optimizer(lr):
-    return SGD, {"lr": lr, "weight_decay": 1e-6, "momentum": 0.9}
+    return tf.keras.optimizers.SGD, {"lr": lr, "weight_decay": 1e-6, "momentum": 0.9}

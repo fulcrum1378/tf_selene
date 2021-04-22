@@ -21,7 +21,7 @@
         -> .state_dict()                           =>
 # torch.nn.ReLU()                                  => tf.keras.layers.ReLU()
 # torch.nn.Sequential()                            => tf.keras.Sequential()
-# torch.nn.Sigmoid()                               => NOT FOUND!! (CHECK tf.keras.activations.sigmoid)
+# torch.nn.Sigmoid()                               => NOT FOUND!!
 # torch.no_grad()                                  => INSIDE tf.Variable() SET trainable=False
 # torch.optim.Optimizer()                          => tf.keras.optimizers.Optimizer() (MAYBE)
 # torch.optim.lr_scheduler.ReduceLROnPlateau()     =>
