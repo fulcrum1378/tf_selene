@@ -24,7 +24,8 @@
 # torch.nn.Sequential()                            => tf.keras.Sequential()
 # torch.nn.Sigmoid()                               => NOT FOUND!!
 # torch.no_grad()                                  => INSIDE tf.Variable() SET trainable=False
-# torch.optim.Optimizer()                          => tf.keras.optimizers.Optimizer() (MAYBE)
+# torch.optim.Optimizer()                          => tf.keras.optimizers.Optimizer()
+        -> .weight_decay                           =>
 # torch.optim.lr_scheduler.ReduceLROnPlateau()     =>
 # torch.optim.SGD()                                => tf.keras.optimizers.SGD()
 # torch.save()                                     => tf.saved_model.save()

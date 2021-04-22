@@ -1,5 +1,3 @@
-from selene_sdk.utils import load_path
-from selene_sdk.utils import parse_configs_and_run
+from selene_sdk.utils import load_path, parse_configs_and_run
 
-configs = load_path("training/config.yml")
-parse_configs_and_run(configs, lr=0.01)
+parse_configs_and_run(load_path("training/config.yml"), lr=0.01)

@@ -73,8 +73,7 @@ def _preprocess(string, environ=None):
 
 
 def instantiate(proxy, bindings=None):
-    if bindings is None:
-        bindings = {}
+    if bindings is None: bindings = {}
     if isinstance(proxy, _Proxy):
         return _instantiate_proxy_tuple(proxy, bindings)
     elif isinstance(proxy, dict):
@@ -88,22 +87,22 @@ def instantiate(proxy, bindings=None):
         return proxy
 
 
-def load(stream, environ=None, instantiate=True, **kwargs) -> Dict:
+def load(stream) -> Dict:
     global IS_INITIALIZED
     if not IS_INITIALIZED: _initialize()
     if isinstance(stream, six.string_types):
         string = stream
     else:
         string = stream.read()
-    return yaml.load(string, Loader=yaml.SafeLoader, **kwargs)
+    return yaml.load(string, Loader=yaml.SafeLoader)
 
 
-def load_path(path, environ=None, instantiate=False, **kwargs) -> Dict:
+def load_path(path: str) -> Dict:
     with open(path, 'r') as f:
         content = ''.join(f.readlines())
     if not isinstance(content, str):
         raise AssertionError("Expected content to be of type str, got " + str(type(content)))
-    return load(content, instantiate=instantiate, environ=environ, **kwargs)
+    return load(content)
 
 
 def _try_to_import(tag_suffix):
@@ -176,10 +175,10 @@ def _multi_constructor_obj(loader, tag_suffix, node):
             raise TypeError(
                 "Received non string object ({0}) as key in mapping.".format(str(key)))
     if '.' not in tag_suffix:
-        callable = eval(tag_suffix)
+        my_callable = eval(tag_suffix)
     else:
-        callable = _try_to_import(tag_suffix)
-    rval = _Proxy(callable=callable, yaml_src=yaml_src, positionals=(), keywords=mapping)
+        my_callable = _try_to_import(tag_suffix)
+    rval = _Proxy(callable=my_callable, yaml_src=yaml_src, positionals=(), keywords=mapping)
     return rval
 
 
@@ -210,14 +209,11 @@ def _construct_mapping(node):  # , deep=False
         try:
             hash(key)
         except TypeError as exc:
-            raise Exception("While constructing a mapping " +
-                            "{0}, found unacceptable " +
-                            "key ({1}).".format(
-                                node.start_mark, (exc, key_node.start_mark)))
+            raise Exception("While constructing a mapping {0}, found unacceptable key ({1})."
+                            .format(node.start_mark, (exc, key_node.start_mark)))
         if key in mapping:
-            raise Exception("While constructing a mapping " +
-                            "{0}, found duplicate " +
-                            "key ({1}).".format(node.start_mark, key))
+            raise Exception("While constructing a mapping {0}, found duplicate key ({1})."
+                            .format(node.start_mark, key))
         value = constructor.construct_object(value_node, deep=False)
         mapping[key] = value
     return mapping

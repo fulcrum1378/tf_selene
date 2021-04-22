@@ -5,8 +5,7 @@ import tensorflow as tf
 class DeeperDeepSEA(tf.Module):
     def __init__(self, sequence_length: int, n_targets: int):
         super(DeeperDeepSEA, self).__init__()
-        conv_kernel_size = 8
-        pool_kernel_size = 4
+        conv_kernel_size, pool_kernel_size = 8, 4
 
         self.conv_net = tf.keras.Sequential()
         self.conv_net.add(tf.keras.layers.Conv1D(320, conv_kernel_size))  # input: 4
@@ -57,3 +56,4 @@ def criterion():
 
 def get_optimizer(lr):
     return tf.keras.optimizers.SGD, {"lr": lr, "weight_decay": 1e-6, "momentum": 0.9}
+# ALLOWED ONLY: clipvalue, clipnorm, global_clipnorm

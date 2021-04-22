@@ -3,6 +3,7 @@ import importlib
 import sys
 from time import strftime
 import types
+from typing import Dict
 
 import tensorflow as tf
 
@@ -18,7 +19,7 @@ def class_instantiate(classobj):
     classobj.__init__(**classobj.__dict__)
 
 
-def module_from_file(path):
+def module_from_file(path: str) -> types.ModuleType:
     parent_path, module_file = os.path.split(path)
     loader = importlib.machinery.SourceFileLoader(module_file[:-3], path)
     module = types.ModuleType(loader.name)
@@ -26,13 +27,13 @@ def module_from_file(path):
     return module
 
 
-def module_from_dir(path):
+def module_from_dir(path: str):
     parent_path, module_dir = os.path.split(path)
     sys.path.insert(0, parent_path)
     return importlib.import_module(module_dir)
 
 
-def initialize_model(model_configs, train=True, lr=None):
+def initialize_model(model_configs, train: bool = True, lr=None):
     import_model_from = model_configs["path"]
     model_class_name = model_configs["class"]
 
@@ -53,18 +54,16 @@ def initialize_model(model_configs, train=True, lr=None):
         optim_class, optim_kwargs = module.get_optimizer(lr)
         return model, criterion, optim_class, optim_kwargs
     elif train:
-        raise ValueError("Learning rate must be specified as a float "
-                         "but was {0}".format(lr))
+        raise ValueError("Learning rate must be specified as a float but was {0}".format(lr))
     return model, criterion
 
 
-def execute(operations, configs, output_dir):
+def execute(operations, configs: Dict, output_dir):
     model = None
     train_model = None
     for op in operations:
         if op == "train":
-            model, loss, optim, optim_kwargs = initialize_model(
-                configs["model"], train=True, lr=configs["lr"])
+            model, loss, optim, optim_kwargs = initialize_model(configs["model"], lr=configs["lr"])
 
             sampler_info = configs["sampler"]
             if output_dir is not None:
@@ -89,16 +88,12 @@ def execute(operations, configs, output_dir):
                 train_model.evaluate()
 
             if not model:
-                model, loss = initialize_model(
-                    configs["model"], train=False)
+                model, loss = initialize_model(configs["model"], train=False)
             if "evaluate_model" in configs:
                 sampler_info = configs["sampler"]
                 sampler = instantiate(sampler_info)
                 evaluate_model_info = configs["evaluate_model"]
-                evaluate_model_info.bind(
-                    model=model,
-                    criterion=loss,
-                    data_sampler=sampler)
+                evaluate_model_info.bind(model=model, criterion=loss, data_sampler=sampler)
                 if output_dir is not None:
                     evaluate_model_info.bind(output_dir=output_dir)
 
@@ -107,8 +102,7 @@ def execute(operations, configs, output_dir):
 
         elif op == "analyze":
             if not model:
-                model, _ = initialize_model(
-                    configs["model"], train=False)
+                model, _ = initialize_model(configs["model"], train=False)
             analyze_seqs_info = configs["analyze_sequences"]
             analyze_seqs_info.bind(model=model)
 
@@ -116,12 +110,10 @@ def execute(operations, configs, output_dir):
             if "variant_effect_prediction" in configs:
                 vareff_info = configs["variant_effect_prediction"]
                 if "vcf_files" not in vareff_info:
-                    raise ValueError("variant effect prediction requires "
-                                     "as input a list of 1 or more *.vcf "
-                                     "files ('vcf_files').")
+                    raise ValueError("variant effect prediction requires as input a list of "
+                                     "1 or more *.vcf files ('vcf_files').")
                 for filepath in vareff_info.pop("vcf_files"):
-                    analyze_seqs.variant_effect_prediction(
-                        filepath, **vareff_info)
+                    analyze_seqs.variant_effect_prediction(filepath, **vareff_info)
             if "in_silico_mutagenesis" in configs:
                 ism_info = configs["in_silico_mutagenesis"]
                 if "sequence" in ism_info:
@@ -130,8 +122,7 @@ def execute(operations, configs, output_dir):
                     analyze_seqs.in_silico_mutagenesis_from_file(**ism_info)
                 elif "fa_files" in ism_info:
                     for filepath in ism_info.pop("fa_files"):
-                        analyze_seqs.in_silico_mutagenesis_from_file(
-                            filepath, **ism_info)
+                        analyze_seqs.in_silico_mutagenesis_from_file(filepath, **ism_info)
                 else:
                     raise ValueError("in silico mutagenesis requires as input "
                                      "the path to the FASTA file "
@@ -144,7 +135,7 @@ def execute(operations, configs, output_dir):
                 analyze_seqs.get_predictions(**predict_info)
 
 
-def parse_configs_and_run(configs, create_subdirectory=True, lr=None):
+def parse_configs_and_run(configs: Dict, create_subdirectory: bool = True, lr=None):
     operations = configs["ops"]
 
     if "train" in operations and "lr" not in configs and lr != "None":
@@ -178,5 +169,4 @@ def parse_configs_and_run(configs, create_subdirectory=True, lr=None):
     else:
         print("Warning: no random seed specified in config file. "
               "Using a random seed ensures results are reproducible.")
-
     execute(operations, configs, current_run_output_dir)
