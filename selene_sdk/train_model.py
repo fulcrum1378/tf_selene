@@ -8,7 +8,6 @@ from typing import Dict, Tuple, Type
 
 import numpy as np
 import tensorflow as tf
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 
@@ -20,12 +19,11 @@ from .utils import PerformanceMetrics
 logger = logging.getLogger("selene")
 
 
-def _metrics_logger(name, out_filepath) -> logging:
+def _metrics_logger(name: str, out_filepath: str) -> logging:
     my_logger = logging.getLogger("{0}".format(name))
     my_logger.setLevel(logging.INFO)
     formatter = logging.Formatter("%(message)s")
-    file_handle = logging.FileHandler(
-        os.path.join(out_filepath, "{0}.txt".format(name)))
+    file_handle = logging.FileHandler(os.path.join(out_filepath, "{0}.txt".format(name)))
     file_handle.setFormatter(formatter)
     my_logger.addHandler(file_handle)
     return my_logger
@@ -36,7 +34,7 @@ class TrainModel(object):
                  model: Type[tf.Module],
                  data_sampler: Sampler,
                  loss_criterion: tf.keras.losses.Loss,
-                 optimizer_class: Type[tf.keras.optimizers.Optimizer],
+                 optimizer_class: Type[tf.keras.optimizers.Optimizer],  # currently tfa.optimizers.SGDW
                  optimizer_kwargs: Dict,
                  batch_size: int,
                  max_steps: int,
@@ -57,6 +55,7 @@ class TrainModel(object):
         self.sampler = data_sampler
         self.criterion = loss_criterion
         self.optimizer = optimizer_class(self.model.variables, **optimizer_kwargs)
+        # {'learning_rate': 0.01, 'weight_decay': 1e-06, 'momentum': 0.9}
 
         self.batch_size = batch_size
         self.max_steps = max_steps
@@ -79,7 +78,6 @@ class TrainModel(object):
         tf.config.threading.set_intra_op_parallelism_threads(cpu_n_threads)
 
         self.use_cuda = use_cuda
-
         if self.use_cuda:
             self.model.cuda()
             self.criterion.cuda()
@@ -109,9 +107,7 @@ class TrainModel(object):
             self._train_loss = self._min_loss = None
 
     def _load_checkpoint(self, checkpoint_resume: str) -> None:
-        checkpoint = tf.saved_model.load(
-            checkpoint_resume,
-            map_location=lambda storage, location: storage)
+        checkpoint = tf.saved_model.load(checkpoint_resume, map_location=lambda storage, location: storage)
         if "state_dict" not in checkpoint:
             raise ValueError("'state_dict' not found in file {0} ".format(checkpoint_resume))
 
@@ -130,16 +126,16 @@ class TrainModel(object):
                     if isinstance(v, tf.Tensor):
                         state[k] = v.cuda()
 
-        logger.info("Resuming from checkpoint: step {0}, min loss {1}".format(
-            self._start_step, self._min_loss))
+        logger.info("Resuming from checkpoint: step {0}, min loss {1}"
+                    .format(self._start_step, self._min_loss))
 
     def _init_train(self) -> None:
         self._start_step = 0
-        self._train_logger = _metrics_logger(
-            "{0}.train".format(__name__), self.output_dir)
+        self._train_logger = _metrics_logger("{0}.train".format(__name__), self.output_dir)
         self._train_logger.info("loss")
         if self._use_scheduler:
-            self.scheduler = ReduceLROnPlateau(self.optimizer, patience=16, verbose=True, factor=0.8)
+            self.scheduler = tf.keras.optimizers.schedules.LearningRateSchedule(
+                self.optimizer, patience=16, verbose=True, factor=0.8)
         self._time_per_step = []
         self._train_loss = []
 
@@ -150,11 +146,10 @@ class TrainModel(object):
             self.sampler.get_feature_from_index,
             report_gt_feature_n_positives=self._report_gt_feature_n_positives,
             metrics=self._metrics)
-        self._validation_logger = _metrics_logger(
-            "{0}.validation".format(__name__), self.output_dir)
+        self._validation_logger = _metrics_logger("{0}.validation".format(__name__), self.output_dir)
 
-        self._validation_logger.info("\t".join(["loss"] +
-                                               sorted([x for x in self._validation_metrics.metrics.keys()])))
+        self._validation_logger.info(
+            "\t".join(["loss"] + sorted([x for x in self._validation_metrics.metrics.keys()])))
 
     def _init_test(self) -> None:
         self._n_test_samples = self._n_test_samples
@@ -167,8 +162,7 @@ class TrainModel(object):
         logger.info("Creating validation dataset.")
         t_i = time()
         self._validation_data, self._all_validation_targets = \
-            self.sampler.get_validation_set(
-                self.batch_size, n_samples=n_samples)
+            self.sampler.get_validation_set(self.batch_size, n_samples=n_samples)
         t_f = time()
         logger.info(("{0} s to load {1} validation examples ({2} validation "
                      "batches) to evaluate after each training step.").format(
@@ -208,16 +202,12 @@ class TrainModel(object):
             "min_loss": self._min_loss,
             "optimizer": self.optimizer.state_dict()
         }
-        if self._save_new_checkpoints is not None and \
-                self._save_new_checkpoints >= self.step:
-            checkpoint_filename = "checkpoint-{0}".format(
-                strftime("%m%d%H%M%S"))
-            self._save_checkpoint(
-                checkpoint_dict, False, filename=checkpoint_filename)
+        if self._save_new_checkpoints is not None and self._save_new_checkpoints >= self.step:
+            checkpoint_filename = "checkpoint-{0}".format(strftime("%m%d%H%M%S"))
+            self._save_checkpoint(checkpoint_dict, False, filename=checkpoint_filename)
             logger.debug("Saving checkpoint `{0}.pb.tar`".format(checkpoint_filename))
         else:
-            self._save_checkpoint(
-                checkpoint_dict, False)
+            self._save_checkpoint(checkpoint_dict, False)
 
     def train_and_validate(self) -> None:
         for step in range(self._start_step, self.max_steps):
@@ -256,8 +246,7 @@ class TrainModel(object):
 
         self._time_per_step.append(t_f - t_i)
         if self.step and self.step % self.nth_step_report_stats == 0:
-            logger.info(("[STEP {0}] average number "
-                         "of steps per second: {1:.1f}").format(
+            logger.info("[STEP {0}] average number of steps per second: {1:.1f}".format(
                 self.step, 1. / np.average(self._time_per_step)))
             self._train_logger.info(np.average(self._train_loss))
             logger.info("training loss: {0}".format(np.average(self._train_loss)))
@@ -270,7 +259,7 @@ class TrainModel(object):
         batch_losses = []
         all_predictions = []
 
-        for (inputs, targets) in data_in_batches:
+        for inputs, targets in data_in_batches:
             inputs = tf.Tensor(inputs)
             targets = tf.Tensor(targets)
 
@@ -292,8 +281,7 @@ class TrainModel(object):
 
     def validate(self) -> None:
         validation_loss, all_predictions = self._evaluate_on_data(self._validation_data)
-        valid_scores = self._validation_metrics.update(
-            all_predictions, self._all_validation_targets)
+        valid_scores = self._validation_metrics.update(all_predictions, self._all_validation_targets)
         for name, score in valid_scores.items():
             logger.info("validation {0}: {1}".format(name, score))
 
@@ -332,14 +320,13 @@ class TrainModel(object):
             data=all_predictions)
         for name, score in average_scores.items():
             logger.info("test {0}: {1}".format(name, score))
-        test_performance = os.path.join(
-            self.output_dir, "test_performance.txt")
+        test_performance = os.path.join(self.output_dir, "test_performance.txt")
         feature_scores_dict = self._test_metrics.write_feature_scores_to_file(test_performance)
         average_scores["loss"] = average_loss
         self._test_metrics.visualize(all_predictions, self._all_test_targets, self.output_dir)
         return average_scores, feature_scores_dict
 
-    def _save_checkpoint(self, state, is_best, filename="checkpoint") -> None:
+    def _save_checkpoint(self, state: Dict, is_best: bool, filename: str = "checkpoint") -> None:
         logger.debug("[TRAIN] {0}: Saving model state to file.".format(state["step"]))
         cp_filepath = os.path.join(self.output_dir, filename)
         tf.saved_model.save(state, "{0}.pb.tar".format(cp_filepath))

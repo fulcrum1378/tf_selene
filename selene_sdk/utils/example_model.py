@@ -1,5 +1,8 @@
+from typing import Tuple
+
 import numpy as np
 import tensorflow as tf
+import tensorflow_addons as tfa
 
 
 class DeeperDeepSEA(tf.Module):
@@ -45,15 +48,20 @@ class DeeperDeepSEA(tf.Module):
         self.classifier.add(tf.keras.layers.ELU())  # n_targets, n_targets
         # self.classifier.add(tf.keras.activations.sigmoid)
 
-    def forward(self, x: tf.Tensor):
+    def forward(self, x: tf.Tensor) -> tf.keras.Sequential:
         out = self.conv_net(x)
         return self.classifier(tf.reshape(out, [out.shape[0], 960 * self._n_channels]))
 
 
-def criterion():
+def criterion() -> tf.keras.losses.Loss:
     return tf.keras.losses.BinaryCrossentropy()
 
 
-def get_optimizer(lr):
-    return tf.keras.optimizers.SGD, {"lr": lr, "weight_decay": 1e-6, "momentum": 0.9}
-# ALLOWED ONLY: clipvalue, clipnorm, global_clipnorm
+def get_optimizer(learning_rate) -> Tuple:
+    step = tf.Variable(0, trainable=False)
+    schedule = tf.optimizers.schedules.PiecewiseConstantDecay([10000, 15000], [1e-0, 1e-1, 1e-2])
+    return tfa.optimizers.SGDW, {
+        "learning_rate": learning_rate,
+        "weight_decay": lambda: 1e-6 * schedule(step),  # 1e-6,
+        "momentum": 0.9
+    }

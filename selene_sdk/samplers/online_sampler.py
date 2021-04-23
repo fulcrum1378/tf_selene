@@ -1,32 +1,34 @@
 from abc import ABCMeta
 import os
 import random
+from typing import List
 
 import numpy as np
 
 from .sampler import Sampler
+from ..sequences import Sequence
 from ..targets import GenomicFeatures
 
 
 class OnlineSampler(Sampler, metaclass=ABCMeta):
     STRAND_SIDES = ('+', '-')
-    """
-    Defines the strands that features can be sampled from.
-    """
 
     def __init__(self,
-                 reference_sequence,
-                 target_path,
-                 features,
-                 seed=436,
-                 validation_holdout=['chr6', 'chr7'],
-                 test_holdout=['chr8', 'chr9'],
-                 sequence_length=1001,
-                 center_bin_to_predict=201,
-                 feature_thresholds=0.5,
-                 mode="train",
-                 save_datasets=[],
-                 output_dir=None):
+                 reference_sequence: Sequence,
+                 target_path: str,
+                 features: List[str],
+                 seed: int = 436,
+                 validation_holdout = None,
+                 test_holdout = None,
+                 sequence_length: int = 1001,
+                 center_bin_to_predict: int = 201,
+                 feature_thresholds: float = 0.5,
+                 mode: str = "train",
+                 save_datasets: List[str] = None,
+                 output_dir: str = None):
+        if validation_holdout is None: validation_holdout = ['chr6', 'chr7']
+        if test_holdout is None: test_holdout = ['chr8', 'chr9']
+        if save_datasets is None: save_datasets = []
         super(OnlineSampler, self).__init__(
             features,
             save_datasets=save_datasets,
@@ -46,14 +48,11 @@ class OnlineSampler(Sampler, metaclass=ABCMeta):
         # specifying a test holdout partition is optional
         if test_holdout:
             self.modes.append("test")
-            if isinstance(validation_holdout, (list,)) and \
-                    isinstance(test_holdout, (list,)):
-                self.validation_holdout = [
-                    str(c) for c in validation_holdout]
+            if isinstance(validation_holdout, (list,)) and isinstance(test_holdout, (list,)):
+                self.validation_holdout = [str(c) for c in validation_holdout]
                 self.test_holdout = [str(c) for c in test_holdout]
                 self._holdout_type = "chromosome"
-            elif isinstance(validation_holdout, float) and \
-                    isinstance(test_holdout, float):
+            elif isinstance(validation_holdout, float) and isinstance(test_holdout, float):
                 self.validation_holdout = validation_holdout
                 self.test_holdout = test_holdout
                 self._holdout_type = "proportion"
@@ -79,9 +78,7 @@ class OnlineSampler(Sampler, metaclass=ABCMeta):
                     "{0}.".format(type(validation_holdout)))
 
         if mode not in self.modes:
-            raise ValueError(
-                "Mode must be one of {0}. Input was '{1}'.".format(
-                    self.modes, mode))
+            raise ValueError("Mode must be one of {0}. Input was '{1}'.".format(self.modes, mode))
         self.mode = mode
 
         self.sequence_length = sequence_length
@@ -108,8 +105,7 @@ class OnlineSampler(Sampler, metaclass=ABCMeta):
                 bin_start, bin_end = center_bin_to_predict
                 if bin_start < 0 or bin_end > self.sequence_length:
                     ValueError(
-                        "center_bin_to_predict [{0}, {1}]"
-                        "is out-of-bound for sequence length {3}.".format(
+                        "center_bin_to_predict [{0}, {1}] is out-of-bound for sequence length {3}.".format(
                             bin_start, bin_end, self.sequence_length))
                 self._start_radius = self._start_window_radius - bin_start
                 self._end_radius = self._end_window_radius - (self.sequence_length - bin_end)
@@ -121,21 +117,19 @@ class OnlineSampler(Sampler, metaclass=ABCMeta):
             feature_thresholds=feature_thresholds)
         self._save_filehandles = {}
 
-    def get_feature_from_index(self, index):
+    def get_feature_from_index(self, index: int):
         return self.target.index_feature_dict[index]
 
     def get_sequence_from_encoding(self, encoding):
         return self.reference_sequence.encoding_to_sequence(encoding)
 
-    def save_dataset_to_file(self, mode, close_filehandle=False):
+    def save_dataset_to_file(self, mode: str, close_filehandle: bool = False):
         if mode not in self._save_datasets:
             return
         samples = self._save_datasets[mode]
         if mode not in self._save_filehandles:
             self._save_filehandles[mode] = open(
-                os.path.join(self._output_dir,
-                             "{0}_data.bed".format(mode)),
-                'w+')
+                os.path.join(self._output_dir, "{0}_data.bed".format(mode)), 'w+')
         file_handle = self._save_filehandles[mode]
         while len(samples) > 0:
             cols = samples.pop(0)
@@ -144,7 +138,7 @@ class OnlineSampler(Sampler, metaclass=ABCMeta):
         if close_filehandle:
             file_handle.close()
 
-    def get_data_and_targets(self, batch_size, n_samples=None, mode=None):
+    def get_data_and_targets(self, batch_size: int, n_samples: int = None, mode: str = None):
         if mode is not None:
             self.set_mode(mode)
         else:
@@ -164,17 +158,16 @@ class OnlineSampler(Sampler, metaclass=ABCMeta):
             self.save_dataset_to_file(mode, close_filehandle=True)
         return sequences_and_targets, targets_mat
 
-    def get_dataset_in_batches(self, mode, batch_size, n_samples=None):
+    def get_dataset_in_batches(self, mode: str, batch_size: int, n_samples: int = None):
         return self.get_data_and_targets(
             batch_size, n_samples=n_samples, mode=mode)
 
-    def get_validation_set(self, batch_size, n_samples=None):
+    def get_validation_set(self, batch_size: int, n_samples: int = None):
         return self.get_dataset_in_batches(
             "validate", batch_size, n_samples=n_samples)
 
-    def get_test_set(self, batch_size, n_samples=None):
+    def get_test_set(self, batch_size: int, n_samples: int = None):
         if "test" not in self.modes:
             raise ValueError("No test partition of the data was specified "
-                             "during initialization. Cannot use method "
-                             "`get_test_set`.")
+                             "during initialization. Cannot use method `get_test_set`.")
         return self.get_dataset_in_batches("test", batch_size, n_samples)

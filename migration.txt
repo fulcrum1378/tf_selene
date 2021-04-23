@@ -25,9 +25,8 @@
 # torch.nn.Sigmoid()                               => NOT FOUND!!
 # torch.no_grad()                                  => INSIDE tf.Variable() SET trainable=False
 # torch.optim.Optimizer()                          => tf.keras.optimizers.Optimizer()
-        -> .weight_decay                           =>
-# torch.optim.lr_scheduler.ReduceLROnPlateau()     =>
-# torch.optim.SGD()                                => tf.keras.optimizers.SGD()
+# torch.optim.lr_scheduler.ReduceLROnPlateau()     => [USE ITS SUBCLASSES:] tf.keras.optimizers.schedules.LearningRateSchedule()
+# torch.optim.SGD()                                => tf.keras.optimizers.SGD() or tfa.optimizers.SGDW()
 # torch.save()                                     => tf.saved_model.save()
 # torch.set_num_threads()                          => tf.config.threading.set_intra_op_parallelism_threads()
 # torch.squeeze()                                  => tf.squeeze()

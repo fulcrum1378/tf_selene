@@ -14,15 +14,11 @@ genomic_features_module = Extension(
     ["selene_sdk/targets/_genomic_features.pyx"],
     include_dirs=[np.get_include()])
 
-ext_modules = [genome_module, genomic_features_module]
-cmdclass = {'build_ext': build_ext}
-
 setup(name="selene-sdk",
       version="1.0",
       long_description=None,
       long_description_content_type='text/markdown',
-      description=("framework for developing sequence-level "
-                   "deep learning networks"),
+      description="framework for developing sequence-level deep learning networks",
       packages=find_packages(),
       url="https://github.com/FunctionLab/selene",
       package_data={
@@ -39,8 +35,8 @@ setup(name="selene-sdk",
           "License :: OSI Approved :: BSD License",
           "Topic :: Scientific/Engineering :: Bio-Informatics"
       ],
-      ext_modules=ext_modules,
-      cmdclass=cmdclass,
+      ext_modules=[genome_module, genomic_features_module],
+      cmdclass={'build_ext': build_ext},
       install_requires=[
           "cython>=0.27.3",
           'click',

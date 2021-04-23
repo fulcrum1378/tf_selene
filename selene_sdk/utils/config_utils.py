@@ -33,7 +33,7 @@ def module_from_dir(path: str):
     return importlib.import_module(module_dir)
 
 
-def initialize_model(model_configs, train: bool = True, lr=None):
+def initialize_model(model_configs, train: bool = True, learning_rate=None):
     import_model_from = model_configs["path"]
     model_class_name = model_configs["class"]
 
@@ -50,11 +50,11 @@ def initialize_model(model_configs, train: bool = True, lr=None):
 
     _is_lua_trained_model(model)
     criterion = module.criterion()
-    if train and isinstance(lr, float):
-        optim_class, optim_kwargs = module.get_optimizer(lr)
+    if train and isinstance(learning_rate, float):
+        optim_class, optim_kwargs = module.get_optimizer(learning_rate)
         return model, criterion, optim_class, optim_kwargs
     elif train:
-        raise ValueError("Learning rate must be specified as a float but was {0}".format(lr))
+        raise ValueError("Learning rate must be specified as a float but was {0}".format(learning_rate))
     return model, criterion
 
 
@@ -63,7 +63,8 @@ def execute(operations, configs: Dict, output_dir):
     train_model = None
     for op in operations:
         if op == "train":
-            model, loss, optim, optim_kwargs = initialize_model(configs["model"], lr=configs["lr"])
+            model, loss, optim, optim_kwargs = initialize_model(
+                configs["model"], learning_rate=configs["learning_rate"])
 
             sampler_info = configs["sampler"]
             if output_dir is not None:
@@ -135,20 +136,19 @@ def execute(operations, configs: Dict, output_dir):
                 analyze_seqs.get_predictions(**predict_info)
 
 
-def parse_configs_and_run(configs: Dict, create_subdirectory: bool = True, lr=None):
+def parse_configs_and_run(configs: Dict, create_subdirectory: bool = True, learning_rate=None):
     operations = configs["ops"]
 
-    if "train" in operations and "lr" not in configs and lr != "None":
-        configs["lr"] = float(lr)
-    elif "train" in operations and "lr" in configs and lr != "None":
+    if "train" in operations and "learning_rate" not in configs and learning_rate != "None":
+        configs["learning_rate"] = float(learning_rate)
+    elif "train" in operations and "learning_rate" in configs and learning_rate != "None":
         print("Warning: learning rate specified in both the "
-              "configuration dict and this method's `lr` parameter. "
-              "Using the `lr` value input to `parse_configs_and_run` "
-              "({0}, not {1}).".format(lr, configs["lr"]))
+              "configuration dict and this method's `learning_rate` parameter. "
+              "Using the `learning_rate` value input to `parse_configs_and_run` "
+              "({0}, not {1}).".format(learning_rate, configs["learning_rate"]))
 
     current_run_output_dir = None
-    if "output_dir" not in configs and \
-            ("train" in operations or "evaluate" in operations):
+    if "output_dir" not in configs and ("train" in operations or "evaluate" in operations):
         print("No top-level output directory specified. All constructors "
               "to be initialized (e.g. Sampler, TrainModel) that require "
               "this parameter must have it specified in their individual "

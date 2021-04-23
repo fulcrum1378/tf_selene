@@ -1,11 +1,13 @@
 from collections import namedtuple
 import logging
 import random
+from typing import Dict, List
 
 import numpy as np
 
 from functools import wraps
 from .online_sampler import OnlineSampler
+from ..sequences import Sequence
 from ..utils import get_indices_and_probabilities
 
 logger = logging.getLogger(__name__)
@@ -15,18 +17,21 @@ SampleIndices = namedtuple("SampleIndices", ["indices", "weights"])
 
 class RandomPositionsSampler(OnlineSampler):
     def __init__(self,
-                 reference_sequence,
-                 target_path,
-                 features,
-                 seed=436,
-                 validation_holdout=['chr6', 'chr7'],
-                 test_holdout=['chr8', 'chr9'],
-                 sequence_length=1000,
-                 center_bin_to_predict=200,
-                 feature_thresholds=0.5,
-                 mode="train",
-                 save_datasets=[],
-                 output_dir=None):
+                 reference_sequence: Sequence,
+                 target_path: str,
+                 features: List[str],
+                 seed: int = 436,
+                 validation_holdout=None,
+                 test_holdout=None,
+                 sequence_length: int = 1000,
+                 center_bin_to_predict: int = 200,
+                 feature_thresholds: float = 0.5,
+                 mode: str = "train",
+                 save_datasets: List[str] = None,
+                 output_dir: str = None):
+        if validation_holdout is None: validation_holdout = ['chr6', 'chr7']
+        if test_holdout is None: test_holdout = ['chr8', 'chr9']
+        if save_datasets is None: save_datasets = []
         super(RandomPositionsSampler, self).__init__(
             reference_sequence,
             target_path,
@@ -41,15 +46,15 @@ class RandomPositionsSampler(OnlineSampler):
             save_datasets=save_datasets,
             output_dir=output_dir)
 
-        self._sample_from_mode = {}
-        self._randcache = {}
+        self._sample_from_mode: Dict = dict()
+        self._randcache: Dict = dict()
         for mode in self.modes:
             self._sample_from_mode[mode] = None
             self._randcache[mode] = {"cache_indices": None, "sample_next": 0}
 
-        self.sample_from_intervals = []
-        self.interval_lengths = []
-        self._initialized = False
+        self.sample_from_intervals: List = list()
+        self.interval_lengths: List = list()
+        self._initialized: bool = False
 
     def init(func):
         # delay initialization to allow  multiprocessing
@@ -82,8 +87,7 @@ class RandomPositionsSampler(OnlineSampler):
         n_indices_validate = int(n_intervals * self.validation_holdout)
         val_indices, val_weights = get_indices_and_probabilities(
             self.interval_lengths, select_indices[:n_indices_validate])
-        self._sample_from_mode["validate"] = SampleIndices(
-            val_indices, val_weights)
+        self._sample_from_mode["validate"] = SampleIndices(val_indices, val_weights)
 
         if self.test_holdout:
             n_indices_test = int(n_intervals * self.test_holdout)
@@ -91,18 +95,15 @@ class RandomPositionsSampler(OnlineSampler):
             test_indices, test_weights = get_indices_and_probabilities(
                 self.interval_lengths,
                 select_indices[n_indices_validate:test_indices_end])
-            self._sample_from_mode["test"] = SampleIndices(
-                test_indices, test_weights)
+            self._sample_from_mode["test"] = SampleIndices(test_indices, test_weights)
 
             tr_indices, tr_weights = get_indices_and_probabilities(
                 self.interval_lengths, select_indices[test_indices_end:])
-            self._sample_from_mode["train"] = SampleIndices(
-                tr_indices, tr_weights)
+            self._sample_from_mode["train"] = SampleIndices(tr_indices, tr_weights)
         else:
             tr_indices, tr_weights = get_indices_and_probabilities(
                 self.interval_lengths, select_indices[n_indices_validate:])
-            self._sample_from_mode["train"] = SampleIndices(
-                tr_indices, tr_weights)
+            self._sample_from_mode["train"] = SampleIndices(tr_indices, tr_weights)
 
     def _partition_genome_by_chromosome(self):
         for mode in self.modes:

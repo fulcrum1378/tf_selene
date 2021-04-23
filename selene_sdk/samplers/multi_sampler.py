@@ -1,3 +1,5 @@
+from typing import List
+
 import numpy as np
 from torch.utils.data import DataLoader
 
@@ -15,35 +17,35 @@ class MultiSampler(Sampler):
     def __init__(self,
                  train_sampler,
                  validate_sampler,
-                 features,
+                 features: List[str],
                  test_sampler=None,
-                 mode="train",
-                 save_datasets=[],
-                 output_dir=None):
+                 mode: str = "train",
+                 save_datasets: List[str] = None,
+                 output_dir: str = None):
+        if save_datasets is None: save_datasets = []
         super(MultiSampler, self).__init__(
             features,
             save_datasets=save_datasets,
             output_dir=output_dir)
-
         self._samplers = {
             "train": train_sampler if isinstance(train_sampler, Sampler)
-                else None,
+            else None,
             "validate": validate_sampler if isinstance(validate_sampler, Sampler)
-                else None
+            else None
         }
 
         self._dataloaders = {
             "train": train_sampler if isinstance(train_sampler, DataLoader)
-                else None,
+            else None,
             "validate": validate_sampler if isinstance(validate_sampler, DataLoader)
-                else None
+            else None
         }
 
         self._iterators = {
             "train": iter(self._dataloaders["train"])
-                if self._dataloaders["train"] else None,
+            if self._dataloaders["train"] else None,
             "validate": iter(self._dataloaders["validate"])
-                if self._dataloaders["validate"] else None
+            if self._dataloaders["validate"] else None
         }
 
         self._index_to_feature = {i: f for (i, f) in enumerate(features)}
@@ -57,14 +59,14 @@ class MultiSampler(Sampler):
 
         self.mode = mode
 
-    def set_mode(self, mode):
+    def set_mode(self, mode: str):
         if mode not in self.modes:
             raise ValueError(
                 "Tried to set mode to be '{0}' but the only valid modes are "
                 "{1}".format(mode, self.modes))
         self.mode = mode
 
-    def _set_batch_size(self, batch_size, mode=None):
+    def _set_batch_size(self, batch_size: int, mode: str = None):
         if mode is None:
             mode = self.mode
 
@@ -84,10 +86,10 @@ class MultiSampler(Sampler):
                       "size: {1}.".format(mode, batch_size))
                 self._iterators[mode] = iter(self._dataloaders[mode])
 
-    def get_feature_from_index(self, index):
+    def get_feature_from_index(self, index: int):
         return self._index_to_feature[index]
 
-    def sample(self, batch_size=1, mode=None):
+    def sample(self, batch_size=1, mode: str = None):
         mode = mode if mode else self.mode
         if self._samplers[mode]:
             return self._samplers[mode].sample(batch_size)
@@ -102,7 +104,7 @@ class MultiSampler(Sampler):
                 data, targets = next(self._iterators[mode])
                 return data.numpy(), targets.numpy()
 
-    def get_data_and_targets(self, batch_size, n_samples=None, mode=None):
+    def get_data_and_targets(self, batch_size: int, n_samples: int = None, mode: str = None):
         mode = mode if mode else self.mode
         if self._samplers[mode]:
             return self._samplers[mode].get_data_and_targets(
@@ -129,13 +131,11 @@ class MultiSampler(Sampler):
             targets_mat = np.vstack(targets_mat)
             return data_and_targets, targets_mat
 
-    def get_validation_set(self, batch_size, n_samples=None):
-        return self.get_data_and_targets(
-            batch_size, n_samples, mode="validate")
+    def get_validation_set(self, batch_size: int, n_samples: int = None):
+        return self.get_data_and_targets(batch_size, n_samples, mode="validate")
 
-    def get_test_set(self, batch_size, n_samples=None):
-        return self.get_data_and_targets(
-            batch_size, n_samples, mode="test")
+    def get_test_set(self, batch_size: int, n_samples: int = None):
+        return self.get_data_and_targets(batch_size, n_samples, mode="test")
 
-    def save_dataset_to_file(self, mode, close_filehandle=False):
+    def save_dataset_to_file(self, mode: str, close_filehandle: bool = False) -> None:
         return None
