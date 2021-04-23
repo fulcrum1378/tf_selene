@@ -1,5 +1,4 @@
 import logging
-import math
 import os
 import shutil
 from time import strftime
@@ -49,13 +48,11 @@ class TrainModel(object):
                  use_cuda: bool = False,
                  # data_parallel: bool = False,
                  logging_verbosity: int = 2,
-                 checkpoint_resume: str = None,
-                 use_scheduler: bool = True):
+                 checkpoint_resume: str = None):
         self.model = model
         self.sampler = data_sampler
         self.criterion = loss_criterion
         self.optimizer = optimizer_class(self.model.variables, **optimizer_kwargs)
-        # {'learning_rate': 0.01, 'weight_decay': 1e-06, 'momentum': 0.9}
 
         self.batch_size = batch_size
         self.max_steps = max_steps
@@ -94,7 +91,6 @@ class TrainModel(object):
         self._metrics = dict(roc_auc=roc_auc_score, average_precision=average_precision_score)
         self._n_validation_samples = n_validation_samples
         self._n_test_samples = n_test_samples
-        self._use_scheduler = use_scheduler
 
         self._init_train()
         self._init_validate()
@@ -126,16 +122,12 @@ class TrainModel(object):
                     if isinstance(v, tf.Tensor):
                         state[k] = v.cuda()
 
-        logger.info("Resuming from checkpoint: step {0}, min loss {1}"
-                    .format(self._start_step, self._min_loss))
+        logger.info("Resuming from checkpoint: step {0}, min loss {1}".format(self._start_step, self._min_loss))
 
     def _init_train(self) -> None:
         self._start_step = 0
         self._train_logger = _metrics_logger("{0}.train".format(__name__), self.output_dir)
         self._train_logger.info("loss")
-        if self._use_scheduler:
-            self.scheduler = tf.keras.optimizers.schedules.LearningRateSchedule(
-                self.optimizer, patience=16, verbose=True, factor=0.8)
         self._time_per_step = []
         self._train_loss = []
 
@@ -253,11 +245,11 @@ class TrainModel(object):
             self._time_per_step = []
             self._train_loss = []
 
-    def _evaluate_on_data(self, data_in_batches) -> Tuple:
+    def _evaluate_on_data(self, data_in_batches: Dict) -> Tuple:
         self.model.eval()
 
-        batch_losses = []
-        all_predictions = []
+        batch_losses = list()
+        all_predictions = list()
 
         for inputs, targets in data_in_batches:
             inputs = tf.Tensor(inputs)
@@ -294,10 +286,6 @@ class TrainModel(object):
             else:
                 to_log.append("NA")
         self._validation_logger.info("\t".join(to_log))
-
-        # scheduler update
-        if self._use_scheduler:
-            self.scheduler.step(math.ceil(validation_loss * 1000.0) / 1000.0)
 
         # save best_model
         if validation_loss < self._min_loss:

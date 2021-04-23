@@ -8,7 +8,8 @@ model: {
         sequence_length: 1000,
         n_targets: 1,
     },
-    non_strand_specific: mean
+    non_strand_specific: mean,
+    use_scheduler: True
 }
 sampler: !obj:selene_sdk.samplers.IntervalsSampler {
     reference_sequence: !obj:selene_sdk.sequences.Genome {

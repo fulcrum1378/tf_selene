@@ -33,7 +33,7 @@ def module_from_dir(path: str):
     return importlib.import_module(module_dir)
 
 
-def initialize_model(model_configs, train: bool = True, learning_rate=None):
+def initialize_model(model_configs: Dict, train: bool = True, learning_rate: float = None):
     import_model_from = model_configs["path"]
     model_class_name = model_configs["class"]
 
@@ -50,12 +50,11 @@ def initialize_model(model_configs, train: bool = True, learning_rate=None):
 
     _is_lua_trained_model(model)
     criterion = module.criterion()
-    if train and isinstance(learning_rate, float):
-        optim_class, optim_kwargs = module.get_optimizer(learning_rate)
+    if train:
+        optim_class, optim_kwargs = module.get_optimizer(learning_rate, model_configs["use_scheduler"])
         return model, criterion, optim_class, optim_kwargs
-    elif train:
-        raise ValueError("Learning rate must be specified as a float but was {0}".format(learning_rate))
-    return model, criterion
+    else:
+        return model, criterion
 
 
 def execute(operations, configs: Dict, output_dir):
@@ -136,7 +135,7 @@ def execute(operations, configs: Dict, output_dir):
                 analyze_seqs.get_predictions(**predict_info)
 
 
-def parse_configs_and_run(configs: Dict, create_subdirectory: bool = True, learning_rate=None):
+def parse_configs_and_run(configs: Dict, create_subdirectory: bool = True, learning_rate: float = None):
     operations = configs["ops"]
 
     if "train" in operations and "learning_rate" not in configs and learning_rate != "None":
