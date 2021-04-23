@@ -1,4 +1,3 @@
-import math
 from typing import Tuple
 
 import numpy as np
@@ -7,8 +6,9 @@ import tensorflow_addons as tfa
 
 
 class DeeperDeepSEA(tf.Module):
-    def __init__(self, sequence_length: int, n_targets: int):
+    def __init__(self, sequence_length: int, n_targets: int, cpu_n_threads: int = 1):
         super(DeeperDeepSEA, self).__init__()
+        tf.config.threading.set_intra_op_parallelism_threads(cpu_n_threads)
         conv_kernel_size, pool_kernel_size = 8, 4
 
         self.conv_net = tf.keras.Sequential()
@@ -58,20 +58,5 @@ def criterion() -> tf.keras.losses.Loss:
     return tf.keras.losses.BinaryCrossentropy()
 
 
-def get_optimizer(learning_rate: float, use_scheduler: bool) -> Tuple:
-    # _init_train():
-    #     if self._use_scheduler:
-    #         self.scheduler = tf.keras.optimizers.schedules.LearningRateSchedule(
-    #             self.optimizer, patience=16, verbose=True, factor=0.8)
-    # validate():
-    # # scheduler update
-    #      if self._use_scheduler:
-    #         self.scheduler.step(math.ceil(validation_loss * 1000.0) / 1000.0)
-
-    step = tf.Variable(0, trainable=False)
-    schedule = tf.optimizers.schedules.PiecewiseConstantDecay([10000, 15000], [1e-0, 1e-1, 1e-2])
-    return tfa.optimizers.SGDW, {
-        "learning_rate": learning_rate,
-        "weight_decay": lambda: 1e-6 * schedule(step),  # 1e-6
-        "momentum": 0.9
-    }
+def get_optimizer(learning_rate: float) -> Tuple:
+    return tfa.optimizers.SGDW, {"learning_rate": learning_rate, "weight_decay": 1e-6, "momentum": 0.9}

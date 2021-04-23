@@ -119,13 +119,12 @@ class Genome(Sequence):
                     self.blacklist_regions)
             self.initialized = True
 
-    def init(self):
-        # delay initialization to allow  multiprocessing
-        @wraps(self)
+    def init(func):
+        # delay initialization to allow multiprocessing
+        @wraps(func)
         def dfunc(self, *args, **kwargs):
             self.unpicklable_init()
-            return self(self, *args, **kwargs)
-
+            return func(self, *args, **kwargs)
         return dfunc
 
     @init

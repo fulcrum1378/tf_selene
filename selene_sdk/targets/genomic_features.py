@@ -1,5 +1,5 @@
 import types
-from typing import List
+from typing import Dict, List
 
 import tabix
 import numpy as np
@@ -29,14 +29,11 @@ def _is_positive_row(start, end,
         (end - start) * threshold - 1)
     if min_overlap_needed < 0:
         min_overlap_needed = 0
-    if overlap_end - overlap_start > min_overlap_needed:
-        return True
-    else:
-        return False
+    return overlap_end - overlap_start > min_overlap_needed
 
 
 def _get_feature_data(chrom, start, end,
-                      thresholds, feature_index_dict, get_feature_rows):
+                      thresholds, feature_index_dict: Dict, get_feature_rows):
     rows = get_feature_rows(chrom, start, end)
     return _fast_get_feature_data(
         start, end, thresholds, feature_index_dict, rows)
@@ -81,7 +78,7 @@ class GenomicFeatures(Target):
         self.feature_index_dict = dict(
             [(feat, index) for index, feat in enumerate(features)])
 
-        self.index_feature_dict = dict(list(enumerate(features)))
+        self.index_feature_dict = {key: i for i, key in enumerate(features)}  # dict(list(enumerate(features)))
 
         if feature_thresholds is None:
             self.feature_thresholds = None
@@ -99,13 +96,12 @@ class GenomicFeatures(Target):
             self.data = tabix.open(self.input_path)
             self._initialized = True
 
-    def init(self):
+    def init(func):
         # delay initialization to allow multiprocessing
-        @wraps(self)
+        @wraps(func)
         def dfunc(self, *args, **kwargs):
             self._unpicklable_init()
-            return self(self, *args, **kwargs)
-
+            return func(self, *args, **kwargs)
         return dfunc
 
     def _query_tabix(self, chrom: str, start: int, end: int):

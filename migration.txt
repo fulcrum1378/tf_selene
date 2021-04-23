@@ -20,6 +20,7 @@
         -> .modules()                              => .submodules
         -> .parameters()                           => .variables
         -> .state_dict()                           =>
+        -> .train()                                =>
 # torch.nn.ReLU()                                  => tf.keras.layers.ReLU()
 # torch.nn.Sequential()                            => tf.keras.Sequential()
 # torch.nn.Sigmoid()                               => NOT FOUND!!

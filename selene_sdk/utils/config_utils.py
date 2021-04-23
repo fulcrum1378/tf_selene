@@ -2,7 +2,7 @@ import os
 import importlib
 import sys
 from time import strftime
-import types
+from types import ModuleType
 from typing import Dict
 
 import tensorflow as tf
@@ -19,10 +19,10 @@ def class_instantiate(classobj):
     classobj.__init__(**classobj.__dict__)
 
 
-def module_from_file(path: str) -> types.ModuleType:
+def module_from_file(path: str) -> ModuleType:
     parent_path, module_file = os.path.split(path)
     loader = importlib.machinery.SourceFileLoader(module_file[:-3], path)
-    module = types.ModuleType(loader.name)
+    module = ModuleType(loader.name)
     loader.exec_module(module)
     return module
 
@@ -38,9 +38,9 @@ def initialize_model(model_configs: Dict, train: bool = True, learning_rate: flo
     model_class_name = model_configs["class"]
 
     if os.path.isdir(import_model_from):
-        module = module_from_dir(import_model_from)
+        module: ModuleType = module_from_dir(import_model_from)
     else:
-        module = module_from_file(import_model_from)
+        module: ModuleType = module_from_file(import_model_from)
     model_class = getattr(module, model_class_name)
 
     model = model_class(**model_configs["class_args"])
@@ -51,7 +51,7 @@ def initialize_model(model_configs: Dict, train: bool = True, learning_rate: flo
     _is_lua_trained_model(model)
     criterion = module.criterion()
     if train:
-        optim_class, optim_kwargs = module.get_optimizer(learning_rate, model_configs["use_scheduler"])
+        optim_class, optim_kwargs = module.get_optimizer(learning_rate)
         return model, criterion, optim_class, optim_kwargs
     else:
         return model, criterion

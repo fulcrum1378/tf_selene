@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import shutil
 from time import strftime
@@ -44,15 +45,21 @@ class TrainModel(object):
                  report_gt_feature_n_positives: int = 10,
                  n_validation_samples: int = None,
                  n_test_samples: int = None,
-                 cpu_n_threads: int = 1,
                  use_cuda: bool = False,
                  # data_parallel: bool = False,
                  logging_verbosity: int = 2,
-                 checkpoint_resume: str = None):
+                 checkpoint_resume: str = None,
+                 use_scheduler: bool = True):
         self.model = model
         self.sampler = data_sampler
         self.criterion = loss_criterion
-        self.optimizer = optimizer_class(self.model.variables, **optimizer_kwargs)
+        self._use_scheduler = use_scheduler
+        step = tf.Variable(0, trainable=False)  # ==> torch.no_grad()
+        schedule = tf.optimizers.schedules.PiecewiseConstantDecay([10000, 15000], [1e-0, 1e-1, 1e-2])
+        weight_decay = optimizer_kwargs["weight_decay"]
+        optimizer_kwargs.pop("weight_decay")
+        weight_decay = lambda: weight_decay * schedule(step)
+        self.optimizer = optimizer_class(weight_decay, **optimizer_kwargs)  # self.model.variables
 
         self.batch_size = batch_size
         self.max_steps = max_steps
@@ -71,8 +78,6 @@ class TrainModel(object):
                     "maximum number of steps: {2}".format(self.batch_size,
                                                           self.nth_step_report_stats,
                                                           self.max_steps))
-
-        tf.config.threading.set_intra_op_parallelism_threads(cpu_n_threads)
 
         self.use_cuda = use_cuda
         if self.use_cuda:
@@ -128,6 +133,9 @@ class TrainModel(object):
         self._start_step = 0
         self._train_logger = _metrics_logger("{0}.train".format(__name__), self.output_dir)
         self._train_logger.info("loss")
+        # if self._use_scheduler:
+        #    self.scheduler = tf.keras.optimizers.schedules.LearningRateSchedule(
+        #        self.optimizer, patience=16, verbose=True, factor=0.8)
         self._time_per_step = []
         self._train_loss = []
 
@@ -286,6 +294,10 @@ class TrainModel(object):
             else:
                 to_log.append("NA")
         self._validation_logger.info("\t".join(to_log))
+
+        # scheduler update
+        if self._use_scheduler:
+            self.scheduler.step(math.ceil(validation_loss * 1000.0) / 1000.0)
 
         # save best_model
         if validation_loss < self._min_loss:
