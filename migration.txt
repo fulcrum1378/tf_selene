@@ -11,7 +11,7 @@
         -> num_features=                           => NOT FOUND (NOT axis)
 # torch.nn.BCELoss()                               => tf.keras.losses.BinaryCrossentropy()
 # torch.nn.Conv1d()                                => tf.keras.layers.Conv1D() (MISSING ARGUMENT FOR INPUT CHANNELS)
-# torch.nn.DataParallel()                          => REMOVED AND REPLACED BY tf.Module
+# torch.nn.DataParallel()                          =>
 # torch.nn.Dropout()                               => tf.keras.layers.Dropout()
         -> p=                                      -> rate= (PRESUMABLY)
 # torch.nn.Linear()                                => tf.keras.layers.ELU (MAYBE) (FAR: tfl.layers.Linear())
@@ -20,7 +20,7 @@
         -> .modules()                              => .submodules
         -> .parameters()                           => .variables
         -> .state_dict()                           =>
-        -> .train()                                =>
+        -> .train()                                => NOT FOUND!! COMMENT IT!
 # torch.nn.ReLU()                                  => tf.keras.layers.ReLU()
 # torch.nn.Sequential()                            => tf.keras.Sequential()
 # torch.nn.Sigmoid()                               => NOT FOUND!!
@@ -41,7 +41,7 @@
         -> .size()                                 => tf.Tensor().shape
         -> .size(dim: int)                         => tf.Tensor().shape[dim]
         -> .sum()                                  => tf.size(tf.Tensor) (ALMOST CERTAINLY)
-        -> .transpose()                            => tf.transpose(tf.Tensor)
+        -> .transpose(**dims) (0 OMITTED SOMET*)   => tf.transpose(tf.Tensor, perm=[**dims])
         -> .unsqueeze_()                           => tf.expand_dims(tf.Tensor) (PRESUMABLY)
         -> .view(d...)                             => tf.reshape(tf.Tensor, [d...]) (ALMOST CERTAINLY)
 # torch.utils.data.DataLoader()                    =>

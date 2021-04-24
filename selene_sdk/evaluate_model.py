@@ -28,7 +28,7 @@ class EvaluateModel(object):
                  n_test_samples: int = None,
                  report_gt_feature_n_positives: int = 10,
                  use_cuda: bool = False,
-                 # data_parallel: bool = False,
+                 data_parallel: bool = False,
                  use_features_ord: List[str] = None):
         self.criterion = criterion
         trained_model = tf.saved_model.load(trained_model_path)
@@ -60,8 +60,15 @@ class EvaluateModel(object):
 
         initialize_logger(os.path.join(self.output_dir, "{0}.log".format(__name__)))
 
+        self.data_parallel = data_parallel
+        if self.data_parallel:
+            self.model = DataParallel(model)
+            logger.debug("Wrapped model in DataParallel")
+
         self.use_cuda = use_cuda
-        if self.use_cuda: self.model.cuda()
+        if self.use_cuda:
+            self.model.cuda()
+
         self.batch_size = batch_size
         self._metrics = PerformanceMetrics(
             self._get_feature_from_index,
@@ -88,8 +95,8 @@ class EvaluateModel(object):
         batch_losses = []
         all_predictions = []
         for (inputs, targets) in self._test_data:
-            inputs = tf.Tensor(inputs)
-            targets = tf.Tensor(targets[:, self._use_ixs])
+            inputs = tf.constant(inputs)
+            targets = tf.constant(targets[:, self._use_ixs])
 
             if self.use_cuda:
                 inputs = inputs.cuda()

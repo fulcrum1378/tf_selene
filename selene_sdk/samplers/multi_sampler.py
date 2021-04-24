@@ -52,18 +52,16 @@ class MultiSampler(Sampler):
 
         if test_sampler is not None:
             self.modes.append("test")
-            self._samplers["test"] = \
-                test_sampler if isinstance(test_sampler, Sampler) else None
-            self._dataloaders["test"] = \
-                test_sampler if isinstance(test_sampler, DataLoader) else None
+            self._samplers["test"] = test_sampler if isinstance(test_sampler, Sampler) else None
+            self._dataloaders["test"] = test_sampler if isinstance(test_sampler, DataLoader) else None
 
         self.mode = mode
 
     def set_mode(self, mode: str):
         if mode not in self.modes:
             raise ValueError(
-                "Tried to set mode to be '{0}' but the only valid modes are "
-                "{1}".format(mode, self.modes))
+                "Tried to set mode to be '{0}' but the only valid modes are {1}"
+                    .format(mode, self.modes))
         self.mode = mode
 
     def _set_batch_size(self, batch_size: int, mode: str = None):

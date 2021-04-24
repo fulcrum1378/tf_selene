@@ -1,5 +1,4 @@
 import logging
-import math
 import os
 import shutil
 from time import strftime
@@ -31,7 +30,7 @@ def _metrics_logger(name: str, out_filepath: str) -> logging:
 
 class TrainModel(object):
     def __init__(self,
-                 model: Type[tf.Module],
+                 model: tf.Module,
                  data_sampler: Sampler,
                  loss_criterion: tf.keras.losses.Loss,
                  optimizer_class: Type[tf.keras.optimizers.Optimizer],  # currently tfa.optimizers.SGDW
@@ -46,10 +45,12 @@ class TrainModel(object):
                  n_validation_samples: int = None,
                  n_test_samples: int = None,
                  use_cuda: bool = False,
-                 # data_parallel: bool = False,
+                 data_parallel: bool = False,
                  logging_verbosity: int = 2,
                  checkpoint_resume: str = None,
                  use_scheduler: bool = True):
+        self._test_data = self._all_test_targets = self.step = self._time_per_step = \
+            self._train_loss = self._min_loss = None
         self.model = model
         self.sampler = data_sampler
         self.criterion = loss_criterion
@@ -80,6 +81,12 @@ class TrainModel(object):
                                                           self.max_steps))
 
         self.use_cuda = use_cuda
+        self.data_parallel = data_parallel
+
+        if self.data_parallel:
+            self.model = DataParallel(model)
+            logger.debug("Wrapped model in DataParallel")
+
         if self.use_cuda:
             self.model.cuda()
             self.criterion.cuda()
@@ -103,9 +110,6 @@ class TrainModel(object):
             self._init_test()
         if checkpoint_resume is not None:
             self._load_checkpoint(checkpoint_resume)
-
-        self._test_data = self._all_test_targets = self.step = self._time_per_step = \
-            self._train_loss = self._min_loss = None
 
     def _load_checkpoint(self, checkpoint_resume: str) -> None:
         checkpoint = tf.saved_model.load(checkpoint_resume, map_location=lambda storage, location: storage)
@@ -187,8 +191,7 @@ class TrainModel(object):
 
     def _get_batch(self) -> Tuple:
         t_i_sampling = time()
-        batch_sequences, batch_targets = self.sampler.sample(
-            batch_size=self.batch_size)
+        batch_sequences, batch_targets = self.sampler.sample(batch_size=self.batch_size)
         t_f_sampling = time()
         logger.debug("[BATCH] Time to sample {0} examples: {1} s.".format(
             self.batch_size, t_f_sampling - t_i_sampling))
@@ -221,12 +224,12 @@ class TrainModel(object):
 
     def train(self) -> None:
         t_i = time()
-        self.model.train()
+        # self.model.train()
         self.sampler.set_mode("train")
 
         inputs, targets = self._get_batch()
-        inputs = tf.Tensor(inputs)
-        targets = tf.Tensor(targets)
+        inputs = tf.constant(inputs)
+        targets = tf.constant(targets)
 
         if self.use_cuda:
             inputs = inputs.cuda()
@@ -235,7 +238,7 @@ class TrainModel(object):
         inputs = tf.Variable(inputs)
         targets = tf.Variable(targets)
 
-        predictions = self.model(inputs.transpose(1, 2))
+        predictions = self.model(tf.transpose(inputs, perm=[1, 2, 0]))
         loss = self.criterion(predictions, targets)
 
         self.optimizer.zero_grad()
@@ -260,8 +263,8 @@ class TrainModel(object):
         all_predictions = list()
 
         for inputs, targets in data_in_batches:
-            inputs = tf.Tensor(inputs)
-            targets = tf.Tensor(targets)
+            inputs = tf.constant(inputs)
+            targets = tf.constant(targets)
 
             if self.use_cuda:
                 inputs = inputs.cuda()
@@ -270,7 +273,7 @@ class TrainModel(object):
             inputs = tf.Variable(inputs, trainable=False)
             targets = tf.Variable(targets, trainable=False)
 
-            predictions = self.model(inputs.transpose(1, 2))
+            predictions = self.model.forward(tf.transpose(inputs, perm=[1, 2, 0]))
             loss = self.criterion(predictions, targets)
 
             all_predictions.append(predictions.data.cpu().numpy())
@@ -296,8 +299,8 @@ class TrainModel(object):
         self._validation_logger.info("\t".join(to_log))
 
         # scheduler update
-        if self._use_scheduler:
-            self.scheduler.step(math.ceil(validation_loss * 1000.0) / 1000.0)
+        # if self._use_scheduler:
+        #    self.scheduler.step(math.ceil(validation_loss * 1000.0) / 1000.0)
 
         # save best_model
         if validation_loss < self._min_loss:
