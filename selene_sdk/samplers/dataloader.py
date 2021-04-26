@@ -47,11 +47,11 @@ class SamplerDataLoader(DataLoader):
 
 class _H5Dataset(tf.data.Dataset):
     def __init__(self,
-                 file_path,
-                 in_memory=False,
-                 unpackbits=False,
-                 sequence_key="sequences",
-                 targets_key="targets"):
+                 file_path: str,
+                 in_memory: bool = False,
+                 unpackbits: bool = False,
+                 sequence_key: str = "sequences",
+                 targets_key: str = "targets"):
         super(_H5Dataset, self).__init__()
         self.file_path = file_path
         self.in_memory = in_memory
@@ -112,15 +112,15 @@ class _H5Dataset(tf.data.Dataset):
 
 class H5DataLoader(DataLoader):
     def __init__(self,
-                 filepath,
-                 in_memory=False,
-                 num_workers=1,
-                 use_subset=None,
-                 batch_size=1,
-                 shuffle=True,
-                 unpackbits=False,
-                 sequence_key="sequences",
-                 targets_key="targets"):
+                 filepath: str,
+                 in_memory: bool = False,
+                 num_workers: int = 1,
+                 use_subset=None,  # int or tuple
+                 batch_size: int = 1,
+                 shuffle: bool = True,
+                 unpackbits: bool = False,
+                 sequence_key: str = "sequences",
+                 targets_key: str = "targets"):
         args = {
             "batch_size": batch_size,
             "num_workers": 0 if in_memory else num_workers,

@@ -106,8 +106,7 @@ class EvaluateModel(object):
             targets = tf.Variable(targets, trainable=False)
 
             if _is_lua_trained_model(self.model):
-                predictions = self.model.forward(
-                    inputs.transpose(1, 2).contiguous().unsqueeze_(2))
+                predictions = self.model.forward(inputs.transpose(1, 2).contiguous().unsqueeze_(2))
             else:
                 predictions = self.model.forward(inputs.transpose(1, 2))
             predictions = predictions[:, self._use_ixs]

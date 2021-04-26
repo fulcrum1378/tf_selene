@@ -123,8 +123,7 @@ class TrainModel(object):
             self.max_steps += self._start_step
 
         self._min_loss = checkpoint["min_loss"]
-        self.optimizer.load_state_dict(
-            checkpoint["optimizer"])
+        self.optimizer.load_state_dict(checkpoint["optimizer"])
         if self.use_cuda:
             for state in self.optimizer.state.values():
                 for k, v in state.items():
