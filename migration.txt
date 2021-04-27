@@ -1,17 +1,17 @@
 # torch.arange()                                   => tf.constant(tf.experimental.numpy.arange())
 # torch.autograd.Variable()                        => tf.Variable()
 # torch.cat()                                      => tf.concat()
-# torch.cuda.manual_seed_all()                     =>         NOT FOUND; USE tf.random.set_seed() INSTEAD!!
+# torch.cuda.manual_seed_all()                     =>
 # torch.from_numpy()                               => tf.convert_to_tensor()
 # torch.load()                                     => tf.saved_model.load()
 # torch.manual_seed()                              => tf.random.set_seed()
 # torch.max()                                      => tf.math.reduce_max()
 # torch.nn._Loss()                                 => tf.keras.losses.Loss()
 # torch.nn.BatchNorm1d()                           => tf.keras.layers.BatchNormalization()
-        -> num_features=                           =>         NOT FOUND (NOT axis)
+        -> num_features=                           =>
 # torch.nn.BCELoss()                               => tf.keras.losses.BinaryCrossentropy()
 # torch.nn.Conv1d()                                => tf.keras.layers.Conv1D() (MISSING ARGUMENT FOR INPUT CHANNELS)
-# torch.nn.DataParallel()                          =>         NOT FOUND!! STUCK!?!
+# torch.nn.DataParallel()                          =>
 # torch.nn.Dropout()                               => tf.keras.layers.Dropout()
         -> p=                                      -> rate= (PRESUMABLY)
 # torch.nn.Linear()                                => tf.keras.layers.ELU (MAYBE) (FAR: tfl.layers.Linear())
@@ -20,10 +20,10 @@
         -> .modules()                              => .submodules
         -> .parameters()                           => .variables
         -> .state_dict()                           =>
-        -> .train()                                =>         NOT FOUND!! COMMENT IT!
+        -> .train()                                =>
 # torch.nn.ReLU()                                  => tf.keras.layers.ReLU()
 # torch.nn.Sequential()                            => tf.keras.Sequential()
-# torch.nn.Sigmoid()                               =>         NOT FOUND!!
+# torch.nn.Sigmoid()                               =>
 # torch.no_grad()                                  => INSIDE tf.Variable() SET trainable=False
 # torch.optim.Optimizer()                          => tf.keras.optimizers.Optimizer()
 # torch.optim.lr_scheduler.ReduceLROnPlateau()     => [USE ITS SUBCLASSES:] tf.keras.optimizers.schedules.LearningRateSchedule()
@@ -34,16 +34,16 @@
 # torch.Tensor()                                   => tf.constant() (-> tf.Tensor())
         -> [tf.Tensor]                             => tf.gather(y, ya)
         -> [:, tf.Tensor]                          => tf.gather(y, ya, axis=tf.constant(1))
-        -> .contiguous()                           =>         PRESUMABLY NOTHING, IGNORE IT
+        -> .contiguous()                           =>
         -> .dim()                                  => tf.Tensor().ndim
         -> .is_cuda                                => "cuda" in x.device.lower() (irrelevant: tf.test.is_built_with_cuda() also tf.test.is_gpu_available())
         -> .long()                                 => tf.cast(tf.Tensor, tf.int64)
         -> .size()                                 => tf.Tensor().shape
         -> .size(dim: int)                         => tf.Tensor().shape[dim]
-        -> .sum()                                  => tf.size(tf.Tensor) (ALMOST CERTAINLY)
+        -> .sum()                                  => tf.size(tf.Tensor)
         -> .transpose(**dims) (0 OMITTED SOMET*)   => tf.transpose(tf.Tensor, perm=[**dims])
-        -> .unsqueeze_()                           => tf.expand_dims(tf.Tensor) (PRESUMABLY)
-        -> .view(d...)                             => tf.reshape(tf.Tensor, [d...]) (ALMOST CERTAINLY)
+        -> .unsqueeze_()                           => tf.expand_dims(tf.Tensor)
+        -> .view(d...)                             => tf.reshape(tf.Tensor, [d...])
 # torch.utils.data.DataLoader()                    =>
 # torch.utils.data.Dataset()                       => tf.data.Dataset()
 # torch.utils.data.sampler.SubsetRandomSampler()   =>

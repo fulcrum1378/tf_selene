@@ -5,34 +5,34 @@ from setuptools import find_packages
 from setuptools import setup
 
 genome_module = Extension(
-    "selene_sdk.sequences._sequence",
-    ["selene_sdk/sequences/_sequence.pyx"],
+    "skylar.sequences._sequence",
+    ["skylar/sequences/_sequence.pyx"],
     include_dirs=[np.get_include()])
 
 genomic_features_module = Extension(
-    "selene_sdk.targets._genomic_features",
-    ["selene_sdk/targets/_genomic_features.pyx"],
+    "skylar.targets._genomic_features",
+    ["skylar/targets/_genomic_features.pyx"],
     include_dirs=[np.get_include()])
 
-setup(name="selene-sdk",
+setup(name="skylar",
       version="1.0",
       long_description=None,
       long_description_content_type='text/markdown',
-      description="framework for developing sequence-level deep learning networks",
+      description="SeleneSDK migrated from PyTorch to TensorFlow",
       packages=find_packages(),
-      url="https://github.com/FunctionLab/selene",
+      url="https://github.com/fulcrum1378/tf_selene",
       package_data={
-          "selene_sdk.interpret": [
+          "skylar.interpret": [
               "data/gencode_v28_hg38/*",
               "data/gencode_v28_hg19/*"
           ],
-          "selene_sdk.sequences": [
+          "skylar.sequences": [
               "data/*"
           ]
       },
       classifiers=[
           "Programming Language :: Python :: 3",
-          "License :: OSI Approved :: BSD License",
+          "License :: OSI Approved :: BSD Liceense",
           "Topic :: Scientific/Engineering :: Bio-Informatics"
       ],
       ext_modules=[genome_module, genomic_features_module],
@@ -57,7 +57,7 @@ setup(name="selene-sdk",
       ],
       entry_points={
           'console_scripts': [
-              'selene_sdk = selene_sdk.cli:main',
+              'skylar = skylar.cli:main',
           ],
       },
       )

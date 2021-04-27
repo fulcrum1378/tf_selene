@@ -1,8 +1,8 @@
-from selene_sdk.predict import AnalyzeSequences
-from selene_sdk.sequences import Genome
-from selene_sdk.utils import DeeperDeepSEA
-from selene_sdk.utils import load_features_list
-from selene_sdk.utils import NonStrandSpecific
+from skylar.predict import AnalyzeSequences
+from skylar.sequences import Genome
+from skylar.utils import DeeperDeepSEA
+from skylar.utils import load_features_list
+from skylar.utils import NonStrandSpecific
 
 model_architecture = NonStrandSpecific(DeeperDeepSEA(1000, 919))
 

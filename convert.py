@@ -3,9 +3,9 @@ from onnx_tf.backend import prepare
 import torch.onnx
 from torch.autograd import Variable
 
-from selene_sdk.utils import load_model_from_state_dict
-from selene_sdk.utils import DeeperDeepSEA
-from selene_sdk.utils import NonStrandSpecific
+from skylar.utils import load_model_from_state_dict
+from skylar.utils import DeeperDeepSEA
+from skylar.utils import NonStrandSpecific
 
 if True:
     root, file = "analyzing/", "example_deeperdeepsea"

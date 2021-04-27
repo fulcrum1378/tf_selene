@@ -2,7 +2,7 @@
 ops: [ train, evaluate ]
 model: {
   # TODO: update this line with the absolute path to the file.
-  path: /home/fulcrum/Documents/tf_selene/selene_sdk/utils/example_model.py,
+  path: /home/fulcrum/Documents/tf_selene/skylar/utils/example_model.py,
   class: DeeperDeepSEA,
   class_args: {
     sequence_length: 1000,
@@ -11,11 +11,11 @@ model: {
   },
   non_strand_specific: mean
 }
-sampler: !obj:selene_sdk.samplers.IntervalsSampler {
-  reference_sequence: !obj:selene_sdk.sequences.Genome {
+sampler: !obj:skylar.samplers.IntervalsSampler {
+  reference_sequence: !obj:skylar.sequences.Genome {
     input_path: ./training/male.hg19.fasta
   },
-  features: !obj:selene_sdk.utils.load_features_list {
+  features: !obj:skylar.utils.load_features_list {
     input_path: ./training/distinct_features.txt
   },
   target_path: ./training/sorted_GM12878_CTCF.bed.gz,
@@ -30,7 +30,7 @@ sampler: !obj:selene_sdk.samplers.IntervalsSampler {
   mode: train,
   save_datasets: [ validate, test ]
 }
-train_model: !obj:selene_sdk.TrainModel {
+train_model: !obj:skylar.TrainModel {
   batch_size: 64,
   max_steps: 8000,
   report_stats_every_n_steps: 1000,
